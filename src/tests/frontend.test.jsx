@@ -6,6 +6,7 @@ import Login from '../pages/Login';
 import ReleaseControl from '../pages/ReleaseControl';
 import JourneyDetails from '../pages/JourneyDetails';
 import { Navbar } from '../components/layout/Navbar';
+import { ThemeProvider } from '../context/ThemeContext';
 
 let mockParams = {};
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -56,7 +57,9 @@ describe('Frontend React Core User Interface Tests', () => {
 
     render(
       <BrowserRouter>
-        <Login />
+        <ThemeProvider>
+          <Login />
+        </ThemeProvider>
       </BrowserRouter>
     );
 
@@ -81,7 +84,9 @@ describe('Frontend React Core User Interface Tests', () => {
 
     render(
       <BrowserRouter>
-        <Navbar onSearchClick={() => {}} />
+        <ThemeProvider>
+          <Navbar onSearchClick={() => {}} />
+        </ThemeProvider>
       </BrowserRouter>
     );
 
@@ -107,7 +112,9 @@ describe('Frontend React Core User Interface Tests', () => {
 
     render(
       <BrowserRouter>
-        <ReleaseControl />
+        <ThemeProvider>
+          <ReleaseControl />
+        </ThemeProvider>
       </BrowserRouter>
     );
 
@@ -132,7 +139,9 @@ describe('Frontend React Core User Interface Tests', () => {
 
     render(
       <BrowserRouter>
-        <JourneyDetails />
+        <ThemeProvider>
+          <JourneyDetails />
+        </ThemeProvider>
       </BrowserRouter>
     );
 
@@ -158,7 +167,9 @@ describe('Frontend React Core User Interface Tests', () => {
 
     render(
       <BrowserRouter>
-        <JourneyDetails />
+        <ThemeProvider>
+          <JourneyDetails />
+        </ThemeProvider>
       </BrowserRouter>
     );
 
