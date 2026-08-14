@@ -47,7 +47,7 @@ jobs:
           PGPASSWORD: postgres
 
       - name: Install Root Dependencies (Frontend)
-        run: npm ci
+        run: npm install
 
       - name: Run Frontend Tests
         run: npm test
@@ -57,7 +57,7 @@ jobs:
 
       - name: Install Backend Dependencies
         working-directory: ./backend
-        run: npm ci
+        run: npm install
 
       - name: Run Backend Tests & Coverage
         working-directory: ./backend
