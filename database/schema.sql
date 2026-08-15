@@ -87,9 +87,9 @@ CREATE TABLE publication_files (
     id SERIAL PRIMARY KEY,
     publication_id INTEGER REFERENCES publications(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    type VARCHAR(50) NOT NULL,
-    size VARCHAR(50) NOT NULL,
-    path VARCHAR(255) NOT NULL,
+    type VARCHAR(255) NOT NULL,
+    size VARCHAR(255) NOT NULL,
+    path TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
