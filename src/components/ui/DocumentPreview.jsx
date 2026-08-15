@@ -89,7 +89,7 @@ const resolveAssetPath = (asset) => {
   
   const backendUrl = import.meta.env.VITE_API_URL 
     ? import.meta.env.VITE_API_URL.replace('/api', '') 
-    : 'http://localhost:5000';
+    : 'https://rudraksh.alwaysdata.net';
 
   if (asset.id) {
     return `${backendUrl}/api/files/${asset.id}`;
