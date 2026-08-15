@@ -107,8 +107,17 @@ export const publishRelease = async (req, res) => {
     ];
 
     // Primary project ID fallback
-    const projRes = await client.query('SELECT id FROM projects LIMIT 1');
-    const projectId = projRes.rows[0]?.id || 1;
+    let projRes = await client.query('SELECT id FROM projects LIMIT 1');
+    let projectId = projRes.rows[0]?.id;
+
+    if (!projectId) {
+      // Auto-create a default project to satisfy the foreign key constraint
+      const newProj = await client.query(
+        'INSERT INTO projects (name, description, created_by, is_primary) VALUES ($1, $2, $3, $4) RETURNING id',
+        ['Default Project', 'Auto-generated primary project', userId, true]
+      );
+      projectId = newProj.rows[0].id;
+    }
 
     const pubRes = await client.query(
       `INSERT INTO publications (project_id, version, date, author, title, changes, assets_count, pipeline, created_by)
@@ -192,7 +201,7 @@ export const publishRelease = async (req, res) => {
     await client.query('ROLLBACK');
     console.error('Publication transaction error:', err);
     await cleanupUploadedFiles(assets);
-    res.status(500).json({ error: 'Database transaction failed, publication rollbacked.' });
+    res.status(500).json({ error: 'Database transaction failed: ' + (err.message || 'Unknown error'), detail: err.detail });
   } finally {
     client.release();
   }
