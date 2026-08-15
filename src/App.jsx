@@ -418,7 +418,7 @@ function App() {
   return (
     <ThemeProvider>
       <AppProvider>
-        <Router>
+        <Router basename="/ARMS">
           <AppContent />
         </Router>
       </AppProvider>
