@@ -196,11 +196,17 @@ export const DocumentPreview = ({ assets = [], className = '' }) => {
         );
       case 'ppt':
       case 'pptx':
+        const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resolveAssetPath(activeAsset))}`;
         return (
-          <div className="flex flex-col gap-sp-16">
-            <SlideshowPreview assetName={activeAsset.name} />
+          <div className="flex flex-col gap-sp-12">
+            <iframe
+              src={officeViewerUrl}
+              title={activeAsset.name}
+              className="w-full h-[550px] border border-border-default rounded-card bg-white"
+              frameBorder="0"
+            />
             <div className="flex justify-between items-center bg-bg-secondary p-sp-12 rounded border border-border-default text-meta">
-              <span className="text-text-secondary font-mono">{activeAsset.name}</span>
+              <span className="text-text-secondary truncate font-mono">{activeAsset.name}</span>
               <a 
                 href={resolveAssetPath(activeAsset)} 
                 target="_blank" 
@@ -208,7 +214,7 @@ export const DocumentPreview = ({ assets = [], className = '' }) => {
                 download 
                 className="flex items-center gap-sp-8 text-accent-primary font-semibold hover:text-accent-hover transition-colors"
               >
-                <Eye className="w-4 h-4" /> Open PPT File / View Deliverable (.pptx)
+                <Download className="w-4 h-4" /> Download Presentation (.pptx)
               </a>
             </div>
           </div>
