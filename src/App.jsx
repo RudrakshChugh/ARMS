@@ -364,7 +364,7 @@ const AppContent = () => {
 
           {/* Admin Protected Routes */}
           <Route path="/admin/login" element={<Login />} />
-          <Route path="/admin/callback" element={<LoginCallback />} />
+          <Route path="/admin/login/callback" element={<LoginCallback />} />
           
           <Route 
             path="/release-control" 
