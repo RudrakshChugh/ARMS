@@ -34,6 +34,9 @@ const __dirname = path.dirname(__filename);
 
 // Configure CORS (restricting credentials access selectively)
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
 app.use(cors({
   origin: (origin, callback) => {
     // Allow server-to-server or REST tools queries (like postman/curl)
