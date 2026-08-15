@@ -244,17 +244,11 @@ export const exchangeToken = async (req, res) => {
 
   try {
     // Retrieve and immediately delete to enforce single-use constraint
-    const codeRes = await db.query('DELETE FROM auth_codes WHERE code = $1 RETURNING jwt, created_at', [code]);
+    const codeRes = await db.query('DELETE FROM auth_codes WHERE code = $1 RETURNING jwt', [code]);
     const row = codeRes.rows[0];
 
     if (!row) {
       return res.status(400).json({ error: 'Authorization code is invalid or has already been used.' });
-    }
-
-    // Enforce 5 minutes expiration limit
-    const ageInSeconds = (Date.now() - new Date(row.created_at).getTime()) / 1000;
-    if (ageInSeconds > 300) {
-      return res.status(400).json({ error: 'Authorization code has expired.' });
     }
 
     res.json({ token: row.jwt });
