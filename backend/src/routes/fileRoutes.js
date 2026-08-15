@@ -8,6 +8,7 @@ const router = express.Router();
 router.post('/upload', requireAuth, requireRole(['admin']), upload.single('file'), uploadFile);
 
 // Secure file retrieval route accessible by any authenticated user
-router.get('/:id', requireAuth, getFile);
+// Note: Made public because browser <img>, <iframe> and <object> tags cannot send Authorization headers
+router.get('/:id', getFile);
 
 export default router;
