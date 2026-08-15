@@ -35,7 +35,12 @@ const __dirname = path.dirname(__filename);
 // Configure CORS (restricting credentials access selectively)
 const allowedOrigins = ['http://localhost:5173', 'http://localhost:3000'];
 if (process.env.FRONTEND_URL) {
-  allowedOrigins.push(process.env.FRONTEND_URL);
+  try {
+    const frontendUrl = new URL(process.env.FRONTEND_URL);
+    allowedOrigins.push(frontendUrl.origin);
+  } catch (e) {
+    console.error('Invalid FRONTEND_URL environment variable');
+  }
 }
 app.use(cors({
   origin: (origin, callback) => {
