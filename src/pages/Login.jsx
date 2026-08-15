@@ -24,7 +24,8 @@ export default function Login() {
   const handleGoogleLogin = () => {
     setIsLoading(true);
     localStorage.setItem('authRedirectPath', from);
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    const BASE_URL = import.meta.env.VITE_API_URL || 'https://rudraksh.alwaysdata.net/api';
+    window.location.href = `${BASE_URL}/auth/google`;
   };
 
   return (
