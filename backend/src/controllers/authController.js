@@ -250,9 +250,9 @@ export const exchangeToken = async (req, res) => {
       return res.status(400).json({ error: 'Authorization code is invalid or has already been used.' });
     }
 
-    // Enforce 2 minutes expiration limit
+    // Enforce 5 minutes expiration limit
     const ageInSeconds = (Date.now() - new Date(row.created_at).getTime()) / 1000;
-    if (ageInSeconds > 120) {
+    if (ageInSeconds > 300) {
       return res.status(400).json({ error: 'Authorization code has expired.' });
     }
 
