@@ -220,9 +220,10 @@ export const googleCallback = async (req, res) => {
 
     // Save temporary short-lived single-use authorization code
     const authCode = crypto.randomUUID();
+    const now = new Date().toISOString();
     await db.query(
-      'INSERT INTO auth_codes (code, jwt) VALUES ($1, $2)',
-      [authCode, token]
+      'INSERT INTO auth_codes (code, jwt, created_at) VALUES ($1, $2, $3)',
+      [authCode, token, now]
     );
 
     // Redirect to frontend callback page with authorization code
