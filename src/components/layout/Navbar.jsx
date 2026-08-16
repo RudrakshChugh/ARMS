@@ -46,32 +46,33 @@ export const Navbar = ({ onSearchClick }) => {
 
   return (
     <>
+
       <nav
-        className={`fixed top-0 left-0 right-0 z-40 h-sp-nav-h font-sans transition-all duration-200 ${
+        className={`sticky top-0 left-0 right-0 z-40 h-[80px] font-sans transition-all duration-300 ${
           isScrolled
-            ? 'glass-strong shadow-1'
-            : 'bg-bg-primary border-b border-border-subtle'
+            ? 'glass'
+            : 'bg-bg-primary'
         }`}
       >
         <div className="max-w-[1280px] h-full mx-auto px-sp-16 sm:px-sp-24 lg:px-sp-48 flex items-center justify-between">
           
           {/* Left: Wordmark */}
           <Link to="/" className="flex items-center gap-sp-8 group select-none shrink-0">
-            <span className="font-mono text-meta tracking-wider font-semibold text-text-primary group-hover:text-accent transition-colors duration-150">
+            <span className="font-serif text-[28px] tracking-widest uppercase font-normal text-text-primary group-hover:text-accent transition-colors duration-300">
               ARMS
             </span>
           </Link>
 
           {/* Center: Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-sp-4">
+          <div className="hidden lg:flex items-center gap-[40px]">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`relative px-sp-12 py-sp-6 text-meta font-medium rounded-button transition-colors duration-150 ${
+                className={`relative text-[11px] uppercase tracking-[0.15em] font-medium transition-colors duration-300 ${
                   isActive(link.path) 
-                    ? 'text-text-primary bg-bg-secondary' 
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                    ? 'text-text-primary' 
+                    : 'text-text-secondary hover:text-accent'
                 }`}
               >
                 {link.name}

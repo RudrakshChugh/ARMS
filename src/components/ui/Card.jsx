@@ -8,16 +8,16 @@ export const Card = ({
   variant = 'default', // 'default' | 'elevated' | 'secondary'
   ...props
 }) => {
-  const baseStyle = "border border-border rounded-card bg-bg-surface font-sans transition-all duration-200 overflow-hidden";
+  const baseStyle = "border border-border rounded-none bg-bg-surface font-sans transition-all duration-300 overflow-hidden";
   
   const variants = {
     default: "bg-bg-surface",
-    elevated: "bg-bg-surface-elevated shadow-1",
+    elevated: "bg-bg-surface", // Removed elevation logic per aesthetic
     secondary: "bg-bg-secondary border-border"
   };
 
   const hoverStyle = hoverable 
-    ? "hover:border-accent/30 hover:shadow-2 hover:-translate-y-0.5 cursor-pointer" 
+    ? "hover:border-accent cursor-pointer" 
     : "";
 
   return (
