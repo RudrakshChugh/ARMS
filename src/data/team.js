@@ -12,39 +12,51 @@ export const teamMembers = [
     color: "#49796B"
   },
   {
-    id: "aarav",
-    name: "Aarav Sharma",
-    role: "Frontend Engineer",
-    primaryResponsibility: "State synchronization components, responsive views layout styling, and design token integration.",
+    id: "rudraksh",
+    name: "Rudraksh",
+    role: "Full Stack Engineer",
+    primaryResponsibility: "State synchronization components, responsive views layout styling, and backend APIs.",
     currentSprint: "Documentation UI Overhaul",
-    technicalSkills: ["React", "Tailwind CSS v4", "Framer Motion", "Scrollspy Hook", "A11y ARIA"],
+    technicalSkills: ["React", "Tailwind CSS", "Node.js", "Express", "Database Queries"],
     currentTask: "Refactoring the scrollspy navigation panel and slideshow preview handlers.",
     currentFocus: "Extracting styling utilities into global tokens variables to prevent CSS duplication.",
-    initials: "AS",
+    initials: "RC",
     color: "#3F7D58"
   },
   {
-    id: "rohan",
-    name: "Rohan Varma",
+    id: "akshat",
+    name: "Akshat",
+    role: "Frontend Developer",
+    primaryResponsibility: "User interface design, accessibility, and client-side logic.",
+    currentSprint: "UI Component Library",
+    technicalSkills: ["React", "Framer Motion", "CSS Variables", "UI/UX", "A11y ARIA"],
+    currentTask: "Implementing responsive design breakpoints across the dashboard.",
+    currentFocus: "Enhancing the visual consistency of the project portfolio.",
+    initials: "AK",
+    color: "#B8863B"
+  },
+  {
+    id: "sneha",
+    name: "Sneha Choudhary",
     role: "Backend & Security Engineer",
     primaryResponsibility: "Access control middleware APIs, secure storage, and testing frameworks.",
     currentSprint: "Access Credentials Audit",
-    technicalSkills: ["Go REST API", "Redis Cache", "JSON Web Tokens", "Docker Sandbox", "JUnit testing"],
+    technicalSkills: ["REST API", "Database Security", "JSON Web Tokens", "Authentication", "Testing"],
     currentTask: "Implementing JWT validation guards and mock data sandbox endpoints.",
     currentFocus: "Securing document file upload parameters from directory traversal bugs.",
-    initials: "RV",
-    color: "#B8863B"
+    initials: "SC",
+    color: "#7B68EE"
   }
 ];
 
 export const responsibilityMatrix = [
-  { id: 1, area: "Frontend Framework & Tokens", primaryOwner: "Aarav Sharma", secondaryOwner: "Manya Kedia", status: "Completed" },
-  { id: 2, area: "Backend API Framework", primaryOwner: "Rohan Varma", secondaryOwner: "Aarav Sharma", status: "Completed" },
-  { id: 3, area: "Database Schema Modeling", primaryOwner: "Manya Kedia", secondaryOwner: "Rohan Varma", status: "Completed" },
-  { id: 4, area: "Authentication & JWT Guards", primaryOwner: "Rohan Varma", secondaryOwner: "Manya Kedia", status: "In Progress" },
-  { id: 5, area: "Staging & Production Deployment", primaryOwner: "Manya Kedia", secondaryOwner: "Rohan Varma", status: "Completed" },
-  { id: 6, area: "Technical Planning Documentation", primaryOwner: "Manya Kedia", secondaryOwner: "Aarav Sharma", status: "In Progress" },
-  { id: 7, area: "Security Auditing & Protection", primaryOwner: "Rohan Varma", secondaryOwner: "Manya Kedia", status: "In Progress" },
-  { id: 8, area: "Unit & Automated Integration Testing", primaryOwner: "Rohan Varma", secondaryOwner: "Manya Kedia", status: "Planned" },
-  { id: 9, area: "Project Management & Releases", primaryOwner: "Manya Kedia", secondaryOwner: "Aarav Sharma", status: "Completed" }
+  { id: 1, area: "Frontend Framework & Tokens", primaryOwner: "Rudraksh", secondaryOwner: "Akshat", status: "Completed" },
+  { id: 2, area: "Backend API Framework", primaryOwner: "Sneha Choudhary", secondaryOwner: "Rudraksh", status: "Completed" },
+  { id: 3, area: "Database Schema Modeling", primaryOwner: "Manya Kedia", secondaryOwner: "Sneha Choudhary", status: "Completed" },
+  { id: 4, area: "Authentication & JWT Guards", primaryOwner: "Sneha Choudhary", secondaryOwner: "Manya Kedia", status: "In Progress" },
+  { id: 5, area: "Staging & Production Deployment", primaryOwner: "Manya Kedia", secondaryOwner: "Rudraksh", status: "Completed" },
+  { id: 6, area: "Technical Planning Documentation", primaryOwner: "Manya Kedia", secondaryOwner: "Akshat", status: "In Progress" },
+  { id: 7, area: "Security Auditing & Protection", primaryOwner: "Sneha Choudhary", secondaryOwner: "Manya Kedia", status: "In Progress" },
+  { id: 8, area: "Unit & Automated Integration Testing", primaryOwner: "Rudraksh", secondaryOwner: "Sneha Choudhary", status: "Planned" },
+  { id: 9, area: "Project Management & Releases", primaryOwner: "Manya Kedia", secondaryOwner: "Akshat", status: "Completed" }
 ];
