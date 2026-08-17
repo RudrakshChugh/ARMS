@@ -244,10 +244,11 @@ export const deleteRelease = async (req, res) => {
     // Start Transaction
     await client.query('BEGIN');
 
-    // 1. We might receive a stage ID (e.g. 'stage-1234') or a version (e.g. 'v1.0') or a pub- ID.
+    // 1. We might receive a stage ID (e.g. 'stage-1234'), a pub- ID, or a raw numeric ID.
     // Let's find the version.
     let versionToDelete = id;
     let projectId = 1; // Default to 1
+    let pubId = null;
 
     if (id.startsWith('stage-')) {
       const stageRes = await client.query('SELECT version, project_id FROM stages WHERE id = $1', [id]);
@@ -257,22 +258,30 @@ export const deleteRelease = async (req, res) => {
       }
       versionToDelete = stageRes.rows[0].version;
       projectId = stageRes.rows[0].project_id;
-    } else if (id.startsWith('pub-')) {
-      const pubRes = await client.query('SELECT version FROM publications WHERE id = $1', [id.replace('pub-', '')]);
-      if (pubRes.rows.length > 0) {
-        versionToDelete = pubRes.rows[0].version;
+    } else {
+      // It's either pub-ID or raw numeric ID
+      const rawId = id.replace('pub-', '');
+      // If rawId is purely numeric, we can query the publications table by ID
+      if (/^\d+$/.test(rawId)) {
+        const pubRes = await client.query('SELECT id, version, project_id FROM publications WHERE id = $1', [rawId]);
+        if (pubRes.rows.length > 0) {
+          versionToDelete = pubRes.rows[0].version;
+          projectId = pubRes.rows[0].project_id || 1;
+          pubId = pubRes.rows[0].id;
+        }
       }
     }
 
-    // Now find the publication using the version
-    const pubRes = await client.query('SELECT id, project_id FROM publications WHERE version = $1', [versionToDelete]);
-    if (pubRes.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Publication record not found for this version.' });
+    // Now confirm the publication exists using the version (if pubId not already found)
+    if (!pubId) {
+      const pubRes = await client.query('SELECT id, project_id FROM publications WHERE version = $1', [versionToDelete]);
+      if (pubRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Publication record not found for this version.' });
+      }
+      pubId = pubRes.rows[0].id;
+      projectId = pubRes.rows[0].project_id || 1;
     }
-
-    const pubId = pubRes.rows[0].id;
-    if (!projectId) projectId = pubRes.rows[0].project_id || 1;
 
     // 2. Fetch publication_files paths to clean up filesystem files after commit
     const fileRes = await client.query('SELECT path FROM publication_files WHERE publication_id = $1', [pubId]);
