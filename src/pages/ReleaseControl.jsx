@@ -158,7 +158,15 @@ export default function ReleaseControl() {
     }
   };
 
-  const removeStagedFile = (idx) => {
+  const removeStagedFile = async (idx) => {
+    const fileToRemove = stagedFiles[idx];
+    if (fileToRemove?.path) {
+      try {
+        await api.deleteFile(fileToRemove.path);
+      } catch (err) {
+        console.error('Failed to delete physical file:', err);
+      }
+    }
     setStagedFiles(prev => prev.filter((_, i) => i !== idx));
   };
 

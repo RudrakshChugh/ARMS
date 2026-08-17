@@ -244,30 +244,51 @@ export const deleteRelease = async (req, res) => {
     // Start Transaction
     await client.query('BEGIN');
 
-    // 1. Fetch publication record details (specifically version)
-    const pubRes = await client.query('SELECT version, project_id FROM publications WHERE id = $1', [id]);
-    if (pubRes.rows.length === 0) {
-      await client.query('ROLLBACK');
-      return res.status(404).json({ error: 'Publication record not found.' });
+    // 1. We might receive a stage ID (e.g. 'stage-1234') or a version (e.g. 'v1.0') or a pub- ID.
+    // Let's find the version.
+    let versionToDelete = id;
+    let projectId = 1; // Default to 1
+
+    if (id.startsWith('stage-')) {
+      const stageRes = await client.query('SELECT version, project_id FROM stages WHERE id = $1', [id]);
+      if (stageRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Stage record not found.' });
+      }
+      versionToDelete = stageRes.rows[0].version;
+      projectId = stageRes.rows[0].project_id;
+    } else if (id.startsWith('pub-')) {
+      const pubRes = await client.query('SELECT version FROM publications WHERE id = $1', [id.replace('pub-', '')]);
+      if (pubRes.rows.length > 0) {
+        versionToDelete = pubRes.rows[0].version;
+      }
     }
 
-    const { version, project_id } = pubRes.rows[0];
+    // Now find the publication using the version
+    const pubRes = await client.query('SELECT id, project_id FROM publications WHERE version = $1', [versionToDelete]);
+    if (pubRes.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Publication record not found for this version.' });
+    }
+
+    const pubId = pubRes.rows[0].id;
+    if (!projectId) projectId = pubRes.rows[0].project_id || 1;
 
     // 2. Fetch publication_files paths to clean up filesystem files after commit
-    const fileRes = await client.query('SELECT path FROM publication_files WHERE publication_id = $1', [id]);
+    const fileRes = await client.query('SELECT path FROM publication_files WHERE publication_id = $1', [pubId]);
     const filesToCleanup = fileRes.rows.map(f => f.path);
 
     // 3. Delete version record matching version
-    await client.query('DELETE FROM project_versions WHERE version = $1 AND project_id = $2', [version, project_id]);
+    await client.query('DELETE FROM project_versions WHERE version = $1 AND project_id = $2', [versionToDelete, projectId]);
 
     // 4. Delete Project Journey stages matching version
-    await client.query('DELETE FROM stages WHERE version = $1 AND project_id = $2', [version, project_id]);
+    await client.query('DELETE FROM stages WHERE version = $1 AND project_id = $2', [versionToDelete, projectId]);
 
     // 5. Delete activity log entries matching version
-    await client.query('DELETE FROM activities WHERE version = $1', [version]);
+    await client.query('DELETE FROM activities WHERE version = $1', [versionToDelete]);
 
     // 6. Delete publication (this cascades to publication_files in DB)
-    await client.query('DELETE FROM publications WHERE id = $1', [id]);
+    await client.query('DELETE FROM publications WHERE id = $1', [pubId]);
 
     // 7. Recalculate order_number for remaining stages to preserve sequential order
     const remainingStagesRes = await client.query('SELECT id FROM stages ORDER BY order_number ASC');

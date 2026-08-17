@@ -104,13 +104,18 @@ export const api = {
   }),
 
   // File staging uploads (multer local fallback)
-  uploadFile: (file) => {
+  uploadFile: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
     return request('/files/upload', {
       method: 'POST',
-      body: formData
+      body: formData,
     });
-  }
+  },
+
+  // Delete physical file from storage
+  deleteFile: (path) => request(`/files/${encodeURIComponent(path)}`, {
+    method: 'DELETE'
+  }),
 };
 export default api;
