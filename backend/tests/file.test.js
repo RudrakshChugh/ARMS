@@ -25,8 +25,10 @@ describe('Backend File Staging, Uploads & Content Retrieval API Tests', () => {
     { ext: 'pptx', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', content: 'dummy pptx slides bytes' }
   ];
 
+  const provider = process.env.STORAGE_PROVIDER || 'local';
+
   formats.forEach(({ ext, mime, content }) => {
-    it(`should upload, store, and retrieve file format: .${ext} with identical binary bytes`, async () => {
+    it(`should upload, store, and retrieve file format: .${ext}`, async () => {
       const adminToken = await getAuthToken();
       const testBuffer = Buffer.from(content);
       const filename = `test.${ext}`;
@@ -43,9 +45,18 @@ describe('Backend File Staging, Uploads & Content Retrieval API Tests', () => {
       
       const fileMeta = uploadRes.body.file;
       expect(fileMeta.path).not.toBeNull();
+
+      if (provider !== 'local') {
+        // Remote storage (e.g. supabase) returns a storage object key
+        // (publications/<ts>/<id>-file.ext); no local disk to inspect.
+        expect(fileMeta.path).toMatch(/^publications\//);
+        return;
+      }
+
+      // 2. Local storage: path is served under /uploads/
       expect(fileMeta.path).toContain('/uploads/');
 
-      // 2. Verify physical file exists on disk
+      // Verify physical file exists on disk
       const storedFilename = fileMeta.path.replace('/uploads/', '');
       const physicalPath = path.join(__dirname, '../uploads', storedFilename);
       expect(fs.existsSync(physicalPath)).toBe(true);

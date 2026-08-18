@@ -1,13 +1,12 @@
 import '@testing-library/jest-dom';
 import { cleanup } from '@testing-library/react';
-import { afterEach } from 'vitest';
 
+// setupFiles runs before the test suite context is ready, so `globals: true`
+// (vitest.config.js) is required to provide afterEach/vi without importing vitest.
 // Automatically clean up DOM tree after each test spec is run
 afterEach(() => {
   cleanup();
 });
-
-import { vi } from 'vitest';
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

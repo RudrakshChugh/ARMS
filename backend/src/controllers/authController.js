@@ -44,7 +44,7 @@ export const login = async (req, res) => {
 };
 
 export const register = async (req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Name, email, and password fields are required.' });
@@ -60,7 +60,9 @@ export const register = async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const targetRole = role && ['user', 'instructor', 'admin'].includes(role) ? role : 'user';
+    // Never accept a role from an unauthenticated public endpoint: always default to 'user'.
+    // Admin/Instructor privileges must be granted by an existing admin, not self-asserted.
+    const targetRole = 'user';
 
     const insertRes = await db.query(
       'INSERT INTO users (name, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',

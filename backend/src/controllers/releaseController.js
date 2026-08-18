@@ -21,15 +21,6 @@ export const publishRelease = async (req, res) => {
   const { title, version, author, stageName, changeSummary, commit, assets } = req.body;
   const userId = req.user.id;
 
-  // Temporary development logging of backend received values
-  console.log('Backend received publish payload:', {
-    title,
-    version,
-    author,
-    stageName,
-    changeSummary
-  });
-
   // 1. Backend Validations
   if (!title || !version || !author || !stageName || !changeSummary) {
     return res.status(400).json({ error: 'All fields (title, version, author, stageName, changeSummary) are required.' });
@@ -163,7 +154,8 @@ export const publishRelease = async (req, res) => {
     const maxOrderRes = await client.query('SELECT COALESCE(MAX(order_number), 0) as max_order FROM stages');
     const nextOrder = maxOrderRes.rows[0].max_order + 1;
     
-    const newStageId = `stage-${Date.now()}`;
+    // Add random suffix so concurrent publishes within the same millisecond cannot collide on PK
+    const newStageId = `stage-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const formattedAssetsJSON = JSON.stringify(assets ? assets.map(a => ({ id: a.id, type: a.type, name: a.name, path: a.path, size: a.size })) : []);
 
     await client.query(
@@ -201,7 +193,8 @@ export const publishRelease = async (req, res) => {
     await client.query('ROLLBACK');
     console.error('Publication transaction error:', err);
     await cleanupUploadedFiles(assets);
-    res.status(500).json({ error: 'Database transaction failed: ' + (err.message || 'Unknown error'), detail: err.detail });
+    // Do not leak DB internals (err.message/err.detail) to the client
+    res.status(500).json({ error: 'Database transaction failed.' });
   } finally {
     client.release();
   }

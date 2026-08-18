@@ -77,7 +77,12 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error('Express Error boundary caught:', err);
   const status = err.status || err.statusCode || 500;
-  res.status(status).json({ error: err.message || 'Internal server error occurred.' });
+  // Avoid leaking server internals for 5xx errors; surface only safe client-facing messages
+  if (status >= 500) {
+    res.status(status).json({ error: 'Internal server error occurred.' });
+  } else {
+    res.status(status).json({ error: err.message || 'Request failed.' });
+  }
 });
 
 if (process.env.NODE_ENV !== 'test') {
