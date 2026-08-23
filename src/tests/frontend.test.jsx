@@ -181,17 +181,21 @@ describe('Frontend React Core User Interface Tests', () => {
     const titleInput = screen.getByPlaceholderText(/architecture & schema specs/i);
     const stageInput = screen.getByPlaceholderText(/planning v3/i);
     const summaryInput = screen.getByPlaceholderText(/what changed in this release/i);
+    const versionInput = screen.getByPlaceholderText('v1.2');
     expect(stageInput.value).toBe('Planning V2');
     expect(summaryInput.value).toBe('Detailed specs');
+    expect(versionInput.value).toBe('v1.2');
 
     fireEvent.change(titleInput, { target: { value: 'Corrected Title' } });
     fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
     expect(mockUpdateRelease).toHaveBeenCalledWith('stage-4', {
       title: 'Corrected Title',
+      version: 'v1.2',
       stageName: 'Planning V2',
       changeSummary: 'Detailed specs',
-      commit: ''
+      commit: '',
+      assets: []
     });
   });
 

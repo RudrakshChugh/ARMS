@@ -140,7 +140,7 @@ Read endpoints are public. Write endpoints require a bearer token from a user wh
 | GET    | /api/activities             | Public | Activity feed                                      |
 | GET    | /api/releases               | Public | List published releases and their assets           |
 | POST   | /api/releases               | Admin  | Publish a release inside a SQL transaction         |
-| PATCH  | /api/releases/:id           | Admin  | Edit a published release across all its records    |
+| PATCH  | /api/releases/:id           | Admin  | Edit a published release, its version and its files |
 | DELETE | /api/releases/:id           | Admin  | Delete a release and every record derived from it  |
 | POST   | /api/files/upload           | Admin  | Stage an uploaded deliverable file (50 MB limit)   |
 | GET    | /api/files/:id              | Public | Redirect to a deliverable file URL                 |

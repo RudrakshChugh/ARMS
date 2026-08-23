@@ -328,11 +328,23 @@ export const deleteRelease = async (req, res) => {
 // publications, project_versions, stages and activities, so an edit has to update
 // every copy inside one transaction or the pages disagree with each other.
 // The version tag is deliberately NOT editable: it is the key joining those tables.
+
+// Edit an already-published release. Publishing denormalises the same facts across
+// publications, project_versions, stages and activities, so an edit has to update
+// every copy inside one transaction or the pages disagree with each other.
+//
+// The version tag is editable, but it is the key joining those four tables, so a
+// rename has to be applied to all of them together.
+//
+// `assets` is the desired FINAL list of files: entries carrying an `id` are kept,
+// existing rows absent from the list are deleted (and their objects removed from
+// storage after COMMIT), and entries without an `id` are inserted. Omit the field
+// entirely to leave the attached files untouched.
 export const updateRelease = async (req, res) => {
   const { id } = req.params;
-  const { title, stageName, changeSummary, commit } = req.body;
+  const { title, version, stageName, changeSummary, commit, assets } = req.body;
 
-  // 1. Validation mirrors publishRelease, minus version and author
+  // 1. Validation mirrors publishRelease, minus author
   if (!title || !stageName || !changeSummary) {
     return res.status(400).json({ error: 'Fields (title, stageName, changeSummary) are required.' });
   }
@@ -342,6 +354,15 @@ export const updateRelease = async (req, res) => {
     return res.status(400).json({ error: 'Milestone stage target name cannot be empty.' });
   }
 
+  const wantsVersionChange = version !== undefined && version !== null && String(version).trim() !== '';
+  const newVersionTag = wantsVersionChange ? String(version).trim() : null;
+  if (wantsVersionChange) {
+    const versionRegex = /^v\d+\.\d+(\.\d+)?$/;
+    if (!versionRegex.test(newVersionTag)) {
+      return res.status(400).json({ error: 'Version tag must follow standard format (e.g. v1.0, v1.2, or v1.2.3).' });
+    }
+  }
+
   if (commit && commit.trim() !== '') {
     const commitRegex = /^[0-9a-fA-F]{7}$/;
     if (!commitRegex.test(commit.trim())) {
@@ -349,7 +370,10 @@ export const updateRelease = async (req, res) => {
     }
   }
 
+  const incomingAssets = Array.isArray(assets) ? assets : null;
+
   const client = await db.pool.connect();
+  let filesToPurge = [];
   try {
     await client.query('BEGIN');
 
@@ -358,63 +382,139 @@ export const updateRelease = async (req, res) => {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Publication record not found for this version.' });
     }
-    const { version, projectId, pubId } = resolved;
+    const { version: oldVersion, projectId, pubId } = resolved;
+    const targetVersion = newVersionTag || oldVersion;
 
     // 2. A rename must not collide with a different milestone. Stages belonging to
     // this same release are excluded so saving without renaming is allowed.
     const stageCheck = await client.query(
       'SELECT id FROM stages WHERE LOWER(TRIM(name)) = LOWER($1) AND version IS DISTINCT FROM $2',
-      [trimmedStageName, version]
+      [trimmedStageName, oldVersion]
     );
     if (stageCheck.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ error: `Milestone stage "${trimmedStageName}" already exists in the Project Journey.` });
     }
 
+    // 3. The version tag is globally unique across publications and changelogs
+    if (targetVersion !== oldVersion) {
+      const dupPub = await client.query(
+        'SELECT id FROM publications WHERE version = $1 AND id <> $2',
+        [targetVersion, pubId]
+      );
+      const dupVer = await client.query(
+        'SELECT id FROM project_versions WHERE version = $1 AND version <> $2',
+        [targetVersion, oldVersion]
+      );
+      if (dupPub.rows.length > 0 || dupVer.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: `Version tag "${targetVersion}" has already been published.` });
+      }
+    }
+
     const newTitle = title.trim();
     const newSummary = changeSummary.trim();
     const newCommit = commit && commit.trim() !== '' ? commit.trim() : null;
 
-    // 3. Publication record
-    await client.query(
-      'UPDATE publications SET title = $1, changes = $2 WHERE id = $3',
-      [newTitle, newSummary, pubId]
-    );
+    // 4. Reconcile attached files when the caller sent a list
+    let finalAssets = null;
+    if (incomingAssets) {
+      const existingRes = await client.query(
+        'SELECT id, path FROM publication_files WHERE publication_id = $1',
+        [pubId]
+      );
 
-    // 4. Changelog record
+      const keepIds = new Set(
+        incomingAssets
+          .filter(a => a && a.id !== undefined && a.id !== null)
+          .map(a => Number(a.id))
+      );
+
+      const removed = existingRes.rows.filter(row => !keepIds.has(Number(row.id)));
+      if (removed.length > 0) {
+        await client.query(
+          'DELETE FROM publication_files WHERE id = ANY($1::int[])',
+          [removed.map(row => Number(row.id))]
+        );
+        // Only purge from storage once the transaction actually commits
+        filesToPurge = removed;
+      }
+
+      for (const asset of incomingAssets) {
+        if (asset.id === undefined || asset.id === null) {
+          const insertRes = await client.query(
+            `INSERT INTO publication_files (publication_id, name, type, size, path)
+             VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+            [pubId, asset.name, asset.type, asset.size || '1.0 MB', asset.path]
+          );
+          asset.id = insertRes.rows[0].id;
+        }
+      }
+
+      finalAssets = incomingAssets.map(a => ({
+        id: a.id, type: a.type, name: a.name, path: a.path, size: a.size
+      }));
+    }
+
+    // 5. Publication record
+    await client.query(
+      'UPDATE publications SET title = $1, changes = $2, version = $3 WHERE id = $4',
+      [newTitle, newSummary, targetVersion, pubId]
+    );
+    if (finalAssets) {
+      await client.query('UPDATE publications SET assets_count = $1 WHERE id = $2', [finalAssets.length, pubId]);
+    }
+
+    // 6. Changelog record
     await client.query(
       `UPDATE project_versions
-       SET change_summary = $1, commit_sha = COALESCE($2, commit_sha)
-       WHERE version = $3 AND project_id = $4`,
-      [newSummary, newCommit, version, projectId]
+       SET change_summary = $1, commit_sha = COALESCE($2, commit_sha), version = $3
+       WHERE version = $4 AND project_id = $5`,
+      [newSummary, newCommit, targetVersion, oldVersion, projectId]
     );
+    if (finalAssets) {
+      await client.query(
+        'UPDATE project_versions SET files_changed = $1 WHERE version = $2 AND project_id = $3',
+        [JSON.stringify(finalAssets.map(a => `docs/${a.name}`)), targetVersion, projectId]
+      );
+    }
 
-    // 5. Journey milestone
+    // 7. Journey milestone
     await client.query(
       `UPDATE stages
        SET name = $1, summary = $2, changes = $3, commit_sha = COALESCE($4, commit_sha),
-           details = $5
-       WHERE version = $6 AND project_id = $7`,
+           details = $5, version = $6
+       WHERE version = $7 AND project_id = $8`,
       [
         trimmedStageName,
         newSummary,
         newSummary,
         newCommit,
         JSON.stringify([`Published release document: ${newTitle}`]),
-        version,
+        targetVersion,
+        oldVersion,
         projectId
       ]
     );
+    if (finalAssets) {
+      await client.query(
+        'UPDATE stages SET assets = $1 WHERE version = $2 AND project_id = $3',
+        [JSON.stringify(finalAssets), targetVersion, projectId]
+      );
+    }
 
-    // 6. Keep the activity feed from showing a title that no longer exists
+    // 8. Keep the activity feed from showing a title or version that no longer exists
     await client.query(
-      'UPDATE activities SET action = $1 WHERE version = $2',
-      [`Published release ${version}: ${newTitle}`, version]
+      'UPDATE activities SET action = $1, version = $2 WHERE version = $3',
+      [`Published release ${targetVersion}: ${newTitle}`, targetVersion, oldVersion]
     );
 
     await client.query('COMMIT');
 
-    res.json({ success: true, version });
+    // 9. Remove detached objects from storage only after the rows are gone for good
+    await cleanupUploadedFiles(filesToPurge);
+
+    res.json({ success: true, version: targetVersion });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('Update publication transaction error:', err);

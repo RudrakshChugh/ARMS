@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import api from '../services/api';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
 import { Input } from '../components/ui/Input';
 import { DocumentPreview } from '../components/ui/DocumentPreview';
 import { SoftwareGridSection } from '../components/ui/SoftwareGridSection';
-import { ArrowLeft, User, Calendar, GitCommit, Link as LinkIcon, Download, Trash2, Pencil } from 'lucide-react';
+import { ArrowLeft, User, Calendar, GitCommit, Link as LinkIcon, Download, Trash2, Pencil, FileText, Plus, X } from 'lucide-react';
 
 export default function JourneyDetails() {
   const { id } = useParams();
@@ -20,7 +21,9 @@ export default function JourneyDetails() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editError, setEditError] = useState('');
-  const [editForm, setEditForm] = useState({ title: '', stageName: '', changeSummary: '', commit: '' });
+  const [editForm, setEditForm] = useState({ title: '', version: '', stageName: '', changeSummary: '', commit: '' });
+  const [editAssets, setEditAssets] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleMarkComplete = async () => {
     try {
@@ -51,18 +54,86 @@ export default function JourneyDetails() {
     setEditError('');
     setEditForm({
       title: publication?.title || stage.name || '',
+      version: stage.version || '',
       stageName: stage.name || '',
       changeSummary: stage.summary || stage.changes || '',
       commit: stage.commit_sha || stage.commit || ''
     });
+    // Prefer the publication's file rows: they always carry the database id that
+    // tells the backend which attachments to keep.
+    setEditAssets(publication?.assets || stage.assets || []);
     setShowEditModal(true);
+  };
+
+  // Files are uploaded to storage immediately, so anything added and then
+  // abandoned has to be swept up or it lingers in the bucket unreferenced.
+  const discardNewUploads = async (assetList) => {
+    for (const asset of assetList) {
+      if (asset.id === undefined || asset.id === null) {
+        try {
+          await api.deleteFile(asset.path);
+        } catch (err) {
+          console.error('Failed to discard uploaded file:', err);
+        }
+      }
+    }
+  };
+
+  const closeEditModal = async () => {
+    if (isSaving || isUploading) return;
+    const pending = editAssets;
+    setShowEditModal(false);
+    await discardNewUploads(pending);
+  };
+
+  const handleAddFiles = async (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (picked.length === 0) return;
+
+    const oversized = picked.filter(f => f.size > 50 * 1024 * 1024).map(f => f.name);
+    const allowed = picked.filter(f => f.size <= 50 * 1024 * 1024);
+    if (oversized.length > 0) {
+      setEditError(`Rejected (over the 50 MB limit): ${oversized.join(', ')}`);
+    }
+    if (allowed.length === 0) return;
+
+    setIsUploading(true);
+    try {
+      const uploaded = await Promise.all(allowed.map(async file => {
+        try {
+          const res = await api.uploadFile(file);
+          return res.file;
+        } catch (err) {
+          setEditError(`Upload failed for "${file.name}": ${err.message}`);
+          return null;
+        }
+      }));
+      setEditAssets(prev => [...prev, ...uploaded.filter(Boolean)]);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeAsset = async (idx) => {
+    const target = editAssets[idx];
+    setEditAssets(prev => prev.filter((_, i) => i !== idx));
+    // A newly uploaded file is not referenced by any row yet, so drop it now.
+    // An existing one is only detached on save, inside the update transaction.
+    if (target && (target.id === undefined || target.id === null)) {
+      try {
+        await api.deleteFile(target.path);
+      } catch (err) {
+        console.error('Failed to discard uploaded file:', err);
+      }
+    }
   };
 
   const handleSaveEdit = async () => {
     setEditError('');
     setIsSaving(true);
     try {
-      await updateRelease(stage.id, editForm);
+      await updateRelease(stage.id, { ...editForm, assets: editAssets });
       setShowEditModal(false);
     } catch (err) {
       setEditError(err.message);
@@ -271,17 +342,13 @@ export default function JourneyDetails() {
       {/* Edit Release Modal */}
       <Modal
         isOpen={showEditModal}
-        onClose={() => {
-          if (!isSaving) setShowEditModal(false);
-        }}
+        onClose={closeEditModal}
         title="Edit release details"
         maxWidth="max-w-lg"
       >
         <div className="flex flex-col gap-sp-16 font-sans">
           <p className="text-meta text-text-secondary leading-relaxed">
             Updates the publication, changelog, journey milestone and activity entry together.
-            The version tag <span className="font-mono font-semibold text-accent">{stage.version}</span> and
-            the attached files cannot be changed here.
           </p>
 
           <Input
@@ -290,6 +357,15 @@ export default function JourneyDetails() {
             value={editForm.title}
             onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
             placeholder="Architecture & Schema Specs"
+          />
+
+          <Input
+            label="Version Tag"
+            required
+            value={editForm.version}
+            onChange={(e) => setEditForm({ ...editForm, version: e.target.value })}
+            placeholder="v1.2"
+            className="font-mono"
           />
 
           <Input
@@ -321,6 +397,62 @@ export default function JourneyDetails() {
             className="font-mono"
           />
 
+          {/* Attached files */}
+          <div className="flex flex-col gap-sp-8 w-full">
+            <label className="text-meta font-medium text-text-secondary">
+              Attached Files ({editAssets.length})
+            </label>
+
+            {editAssets.length === 0 && (
+              <p className="text-meta text-text-muted">No files attached to this release.</p>
+            )}
+
+            {editAssets.length > 0 && (
+              <ul className="flex flex-col border border-border divide-y divide-border-subtle">
+                {editAssets.map((asset, idx) => (
+                  <li
+                    key={asset.id ?? `new-${asset.path}`}
+                    className="flex items-center justify-between gap-sp-12 px-sp-12 py-sp-8 bg-bg-surface"
+                  >
+                    <span className="flex items-center gap-sp-8 min-w-0">
+                      <FileText className="w-3.5 h-3.5 text-text-muted shrink-0" />
+                      <span className="text-meta text-text-primary truncate">{asset.name}</span>
+                      <span className="text-xs text-text-muted shrink-0">{asset.size}</span>
+                      {(asset.id === undefined || asset.id === null) && (
+                        <Badge variant="accent" className="!px-sp-6 !py-[1px] text-[9px] shrink-0">NEW</Badge>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeAsset(idx)}
+                      disabled={isSaving || isUploading}
+                      aria-label={`Remove ${asset.name}`}
+                      className="text-text-muted hover:text-status-error p-sp-4 transition-colors duration-150 cursor-pointer shrink-0"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <label className="inline-flex items-center gap-sp-8 text-meta font-medium text-accent hover:text-accent-hover cursor-pointer w-fit">
+              <Plus className="w-3.5 h-3.5" />
+              {isUploading ? 'Uploading...' : 'Add files'}
+              <input
+                type="file"
+                multiple
+                className="hidden"
+                disabled={isSaving || isUploading}
+                onChange={handleAddFiles}
+                accept=".pdf,.ppt,.pptx,.png,.jpg,.jpeg,.svg,.mp4,.md,.markdown"
+              />
+            </label>
+            <p className="text-xs text-text-muted">
+              Removed files are detached when you save. Max 50 MB per file.
+            </p>
+          </div>
+
           {editError && (
             <p className="text-meta font-medium text-status-error">{editError}</p>
           )}
@@ -328,15 +460,15 @@ export default function JourneyDetails() {
           <div className="flex justify-end gap-sp-12 pt-sp-16 border-t border-border-subtle">
             <Button
               variant="outline"
-              disabled={isSaving}
-              onClick={() => setShowEditModal(false)}
+              disabled={isSaving || isUploading}
+              onClick={closeEditModal}
               className="!h-sp-button-h !px-sp-16"
             >
               Cancel
             </Button>
             <Button
               variant="primary"
-              disabled={isSaving}
+              disabled={isSaving || isUploading}
               onClick={handleSaveEdit}
               className="!h-sp-button-h !px-sp-16"
             >

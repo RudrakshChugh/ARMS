@@ -268,18 +268,27 @@ title, stage name, change summary and optional commit SHA it updates
 `stages` (name, summary, changes, commit_sha, details) and the `activities` row so
 the feed does not keep showing a title that no longer exists.
 
-Two deliberate constraints:
+**The version tag is editable**, but it is the key joining those four tables, so
+the rename is applied to all of them in the same transaction and rejected with 409
+if the target tag is already published.
 
-- **The version tag is not editable.** It is the key joining all four tables, so
-  renaming it would mean cascading the rename everywhere. Change it only by
-  deleting and republishing.
-- **Assets are not editable.** Adding or removing files on a published release is
-  not implemented; `publication_files` and `assets_count` are untouched.
+**Attachments are editable** through the `assets` field, which is the desired
+FINAL list: entries carrying an `id` are kept, existing `publication_files` rows
+absent from the list are deleted, and entries without an `id` are inserted. The
+denormalised copies (`publications.assets_count`, `stages.assets`,
+`project_versions.files_changed`) are rewritten to match, and the detached storage
+objects are purged only after COMMIT. **Omit `assets` entirely to leave files
+untouched** — a payload without it is not read as "remove everything".
 
 The duplicate-stage-name check excludes stages belonging to this same version, so
 saving a release without renaming it is allowed. Editing preserves the stage id,
 so the `/journey/<stage-id>` URL survives an edit — unlike delete-and-republish,
 which mints a new id and drops the uploaded files.
+
+On the client, files are uploaded to storage the moment they are picked, so
+`JourneyDetails` deletes any newly uploaded-but-unsaved file when the modal is
+cancelled or the row is removed, otherwise they would linger unreferenced in the
+bucket.
 
 ---
 
