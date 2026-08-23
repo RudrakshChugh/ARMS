@@ -4,17 +4,23 @@ import { useApp } from '../context/AppContext';
 import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { Modal } from '../components/ui/Modal';
+import { Input } from '../components/ui/Input';
 import { DocumentPreview } from '../components/ui/DocumentPreview';
 import { SoftwareGridSection } from '../components/ui/SoftwareGridSection';
-import { ArrowLeft, User, Calendar, GitCommit, Link as LinkIcon, Download, Trash2 } from 'lucide-react';
+import { ArrowLeft, User, Calendar, GitCommit, Link as LinkIcon, Download, Trash2, Pencil } from 'lucide-react';
 
 export default function JourneyDetails() {
   const { id } = useParams();
-  const { stages, versions, currentUser, markStageComplete, deletePublication } = useApp();
+  const { stages, versions, publications, currentUser, markStageComplete, deletePublication, updateRelease } = useApp();
   const navigate = useNavigate();
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+  const [editForm, setEditForm] = useState({ title: '', stageName: '', changeSummary: '', commit: '' });
 
   const handleMarkComplete = async () => {
     try {
@@ -37,6 +43,33 @@ export default function JourneyDetails() {
   };
 
   const stage = stages.find(s => s.id === id);
+
+  // The publication holds the release title; the stage row holds everything else.
+  const publication = publications.find(p => p.version === stage?.version);
+
+  const openEditModal = () => {
+    setEditError('');
+    setEditForm({
+      title: publication?.title || stage.name || '',
+      stageName: stage.name || '',
+      changeSummary: stage.summary || stage.changes || '',
+      commit: stage.commit_sha || stage.commit || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    setEditError('');
+    setIsSaving(true);
+    try {
+      await updateRelease(stage.id, editForm);
+      setShowEditModal(false);
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   if (!stage) {
     return (
@@ -126,9 +159,9 @@ export default function JourneyDetails() {
               </div>
               <div className="p-sp-16 flex flex-col gap-sp-4">
                 <span className="text-text-muted flex items-center gap-sp-8"><LinkIcon className="w-3.5 h-3.5" /> Source Link</span>
-                {stage.commit ? (
+                {(stage.commit_sha || stage.commit) ? (
                   <span className="font-mono font-medium text-text-primary">
-                    commit <span className="bg-bg-secondary px-1 border border-border rounded text-xs">{stage.commit}</span>
+                    commit <span className="bg-bg-secondary px-1 border border-border rounded text-xs">{stage.commit_sha || stage.commit}</span>
                   </span>
                 ) : (
                   <span className="text-text-muted">No commit associated</span>
@@ -137,15 +170,23 @@ export default function JourneyDetails() {
               {currentUser && currentUser.role === 'admin' && (
                 <div className="p-sp-16 border-t border-border-subtle flex flex-col gap-sp-8">
                   {stage.status === 'In Progress' && (
-                    <Button 
-                      variant="primary" 
+                    <Button
+                      variant="primary"
                       className="w-full !h-sp-button-h"
                       onClick={handleMarkComplete}
                     >
                       Mark as Completed
                     </Button>
                   )}
-                  <Button 
+                  <Button
+                    variant="secondary"
+                    icon={Pencil}
+                    className="w-full"
+                    onClick={openEditModal}
+                  >
+                    Edit Release Details
+                  </Button>
+                  <Button
                     variant="danger" 
                     icon={Trash2}
                     className="w-full"
@@ -226,6 +267,84 @@ export default function JourneyDetails() {
         </div>
 
       </div>
+
+      {/* Edit Release Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          if (!isSaving) setShowEditModal(false);
+        }}
+        title="Edit release details"
+        maxWidth="max-w-lg"
+      >
+        <div className="flex flex-col gap-sp-16 font-sans">
+          <p className="text-meta text-text-secondary leading-relaxed">
+            Updates the publication, changelog, journey milestone and activity entry together.
+            The version tag <span className="font-mono font-semibold text-accent">{stage.version}</span> and
+            the attached files cannot be changed here.
+          </p>
+
+          <Input
+            label="Release Title"
+            required
+            value={editForm.title}
+            onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+            placeholder="Architecture & Schema Specs"
+          />
+
+          <Input
+            label="Milestone Stage Name"
+            required
+            value={editForm.stageName}
+            onChange={(e) => setEditForm({ ...editForm, stageName: e.target.value })}
+            placeholder="Planning V3"
+          />
+
+          <div className="flex flex-col gap-sp-6 w-full">
+            <label className="text-meta font-medium text-text-secondary">
+              Change Summary<span className="text-status-error ml-0.5">*</span>
+            </label>
+            <textarea
+              value={editForm.changeSummary}
+              onChange={(e) => setEditForm({ ...editForm, changeSummary: e.target.value })}
+              rows={4}
+              placeholder="What changed in this release?"
+              className="w-full bg-bg-surface border border-border rounded-input text-body px-sp-12 py-sp-8 transition-all duration-150 placeholder:text-text-muted text-text-primary focus:border-accent focus:shadow-[0_0_0_3px_var(--color-accent-surface)] resize-y"
+            />
+          </div>
+
+          <Input
+            label="Commit SHA (optional, 7 hex characters)"
+            value={editForm.commit}
+            onChange={(e) => setEditForm({ ...editForm, commit: e.target.value })}
+            placeholder="a82fc21"
+            className="font-mono"
+          />
+
+          {editError && (
+            <p className="text-meta font-medium text-status-error">{editError}</p>
+          )}
+
+          <div className="flex justify-end gap-sp-12 pt-sp-16 border-t border-border-subtle">
+            <Button
+              variant="outline"
+              disabled={isSaving}
+              onClick={() => setShowEditModal(false)}
+              className="!h-sp-button-h !px-sp-16"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              disabled={isSaving}
+              onClick={handleSaveEdit}
+              className="!h-sp-button-h !px-sp-16"
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal

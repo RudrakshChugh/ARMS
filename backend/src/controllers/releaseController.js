@@ -1,6 +1,43 @@
 import db from '../config/db.js';
 import storageService from '../services/storage/index.js';
 
+// A release is addressed by three different ids depending on which page issued the
+// request: a stage id ('stage-1786824663626'), a prefixed publication id ('pub-4'),
+// or a raw numeric publication id. Resolve any of them to the publication row and
+// the version string that ties the five tables together.
+// Returns null when nothing matches, so callers can answer 404.
+const resolvePublication = async (client, id) => {
+  let version = id;
+  let projectId = 1;
+  let pubId = null;
+
+  if (id.startsWith('stage-')) {
+    const stageRes = await client.query('SELECT version, project_id FROM stages WHERE id = $1', [id]);
+    if (stageRes.rows.length === 0) return null;
+    version = stageRes.rows[0].version;
+    projectId = stageRes.rows[0].project_id;
+  } else {
+    const rawId = id.replace('pub-', '');
+    if (/^\d+$/.test(rawId)) {
+      const pubRes = await client.query('SELECT id, version, project_id FROM publications WHERE id = $1', [rawId]);
+      if (pubRes.rows.length > 0) {
+        version = pubRes.rows[0].version;
+        projectId = pubRes.rows[0].project_id || 1;
+        pubId = pubRes.rows[0].id;
+      }
+    }
+  }
+
+  if (!pubId) {
+    const pubRes = await client.query('SELECT id, project_id FROM publications WHERE version = $1', [version]);
+    if (pubRes.rows.length === 0) return null;
+    pubId = pubRes.rows[0].id;
+    projectId = pubRes.rows[0].project_id || 1;
+  }
+
+  return { version, projectId, pubId };
+};
+
 const cleanupUploadedFiles = async (assets) => {
   if (assets && assets.length > 0) {
     for (const asset of assets) {
@@ -235,44 +272,13 @@ export const deleteRelease = async (req, res) => {
     // Start Transaction
     await client.query('BEGIN');
 
-    // 1. We might receive a stage ID (e.g. 'stage-1234'), a pub- ID, or a raw numeric ID.
-    // Let's find the version.
-    let versionToDelete = id;
-    let projectId = 1; // Default to 1
-    let pubId = null;
-
-    if (id.startsWith('stage-')) {
-      const stageRes = await client.query('SELECT version, project_id FROM stages WHERE id = $1', [id]);
-      if (stageRes.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Stage record not found.' });
-      }
-      versionToDelete = stageRes.rows[0].version;
-      projectId = stageRes.rows[0].project_id;
-    } else {
-      // It's either pub-ID or raw numeric ID
-      const rawId = id.replace('pub-', '');
-      // If rawId is purely numeric, we can query the publications table by ID
-      if (/^\d+$/.test(rawId)) {
-        const pubRes = await client.query('SELECT id, version, project_id FROM publications WHERE id = $1', [rawId]);
-        if (pubRes.rows.length > 0) {
-          versionToDelete = pubRes.rows[0].version;
-          projectId = pubRes.rows[0].project_id || 1;
-          pubId = pubRes.rows[0].id;
-        }
-      }
+    // 1. The id may be a stage id, a pub- id, or a raw numeric id.
+    const resolved = await resolvePublication(client, id);
+    if (!resolved) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Publication record not found for this version.' });
     }
-
-    // Now confirm the publication exists using the version (if pubId not already found)
-    if (!pubId) {
-      const pubRes = await client.query('SELECT id, project_id FROM publications WHERE version = $1', [versionToDelete]);
-      if (pubRes.rows.length === 0) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Publication record not found for this version.' });
-      }
-      pubId = pubRes.rows[0].id;
-      projectId = pubRes.rows[0].project_id || 1;
-    }
+    const { version: versionToDelete, projectId, pubId } = resolved;
 
     // 2. Fetch publication_files paths to clean up filesystem files after commit
     const fileRes = await client.query('SELECT path FROM publication_files WHERE publication_id = $1', [pubId]);
@@ -313,6 +319,106 @@ export const deleteRelease = async (req, res) => {
     await client.query('ROLLBACK');
     console.error('Delete publication transaction error:', err);
     res.status(500).json({ error: 'Database transaction failed, deletion rolled back.' });
+  } finally {
+    client.release();
+  }
+};
+
+// Edit an already-published release. Publishing denormalises the same facts across
+// publications, project_versions, stages and activities, so an edit has to update
+// every copy inside one transaction or the pages disagree with each other.
+// The version tag is deliberately NOT editable: it is the key joining those tables.
+export const updateRelease = async (req, res) => {
+  const { id } = req.params;
+  const { title, stageName, changeSummary, commit } = req.body;
+
+  // 1. Validation mirrors publishRelease, minus version and author
+  if (!title || !stageName || !changeSummary) {
+    return res.status(400).json({ error: 'Fields (title, stageName, changeSummary) are required.' });
+  }
+
+  const trimmedStageName = stageName.trim();
+  if (!trimmedStageName) {
+    return res.status(400).json({ error: 'Milestone stage target name cannot be empty.' });
+  }
+
+  if (commit && commit.trim() !== '') {
+    const commitRegex = /^[0-9a-fA-F]{7}$/;
+    if (!commitRegex.test(commit.trim())) {
+      return res.status(400).json({ error: 'Commit SHA must be exactly 7 hexadecimal characters.' });
+    }
+  }
+
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const resolved = await resolvePublication(client, id);
+    if (!resolved) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Publication record not found for this version.' });
+    }
+    const { version, projectId, pubId } = resolved;
+
+    // 2. A rename must not collide with a different milestone. Stages belonging to
+    // this same release are excluded so saving without renaming is allowed.
+    const stageCheck = await client.query(
+      'SELECT id FROM stages WHERE LOWER(TRIM(name)) = LOWER($1) AND version IS DISTINCT FROM $2',
+      [trimmedStageName, version]
+    );
+    if (stageCheck.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: `Milestone stage "${trimmedStageName}" already exists in the Project Journey.` });
+    }
+
+    const newTitle = title.trim();
+    const newSummary = changeSummary.trim();
+    const newCommit = commit && commit.trim() !== '' ? commit.trim() : null;
+
+    // 3. Publication record
+    await client.query(
+      'UPDATE publications SET title = $1, changes = $2 WHERE id = $3',
+      [newTitle, newSummary, pubId]
+    );
+
+    // 4. Changelog record
+    await client.query(
+      `UPDATE project_versions
+       SET change_summary = $1, commit_sha = COALESCE($2, commit_sha)
+       WHERE version = $3 AND project_id = $4`,
+      [newSummary, newCommit, version, projectId]
+    );
+
+    // 5. Journey milestone
+    await client.query(
+      `UPDATE stages
+       SET name = $1, summary = $2, changes = $3, commit_sha = COALESCE($4, commit_sha),
+           details = $5
+       WHERE version = $6 AND project_id = $7`,
+      [
+        trimmedStageName,
+        newSummary,
+        newSummary,
+        newCommit,
+        JSON.stringify([`Published release document: ${newTitle}`]),
+        version,
+        projectId
+      ]
+    );
+
+    // 6. Keep the activity feed from showing a title that no longer exists
+    await client.query(
+      'UPDATE activities SET action = $1 WHERE version = $2',
+      [`Published release ${version}: ${newTitle}`, version]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({ success: true, version });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Update publication transaction error:', err);
+    res.status(500).json({ error: 'Database transaction failed, update rolled back.' });
   } finally {
     client.release();
   }

@@ -211,6 +211,7 @@ Admin-only (`requireAuth` + `requireRole(['admin'])`):
 
 ```
 POST   /api/releases                 publish (big transaction, 6.1)
+PATCH  /api/releases/:id             edit a published release (6.3)
 DELETE /api/releases/:id             delete a release everywhere (6.2)
 PATCH  /api/stages/:id/complete      status -> 'Completed'
 POST   /api/files/upload             multipart, field name "file"
@@ -251,11 +252,34 @@ generic message — DB internals are never leaked to the client.
 
 ### 6.2 Deleting a release (`deleteRelease`)
 
-Accepts three id shapes: `stage-<id>`, `pub-<n>`, or a raw numeric id. It
-resolves them to a `version`, then inside a transaction deletes from
+Uses the shared `resolvePublication(client, id)` helper, which accepts three id
+shapes — `stage-<id>`, `pub-<n>`, or a raw numeric id — and resolves any of them
+to `{ version, projectId, pubId }` (or null for a 404). From the `version`, then inside a transaction deletes from
 `project_versions`, `stages`, `activities` and `publications` (which cascades to
 `publication_files`), **renumbers `order_number` across all remaining stages**,
 and only *after* COMMIT deletes the physical files from storage.
+
+### 6.3 Editing a release (`updateRelease`)
+
+Because publishing denormalises the same facts across four tables, an edit has to
+update every copy in one transaction or the pages contradict each other. Given a
+title, stage name, change summary and optional commit SHA it updates
+`publications` (title, changes), `project_versions` (change_summary, commit_sha),
+`stages` (name, summary, changes, commit_sha, details) and the `activities` row so
+the feed does not keep showing a title that no longer exists.
+
+Two deliberate constraints:
+
+- **The version tag is not editable.** It is the key joining all four tables, so
+  renaming it would mean cascading the rename everywhere. Change it only by
+  deleting and republishing.
+- **Assets are not editable.** Adding or removing files on a published release is
+  not implemented; `publication_files` and `assets_count` are untouched.
+
+The duplicate-stage-name check excludes stages belonging to this same version, so
+saving a release without renaming it is allowed. Editing preserves the stage id,
+so the `/journey/<stage-id>` URL survives an edit — unlike delete-and-republish,
+which mints a new id and drops the uploaded files.
 
 ---
 

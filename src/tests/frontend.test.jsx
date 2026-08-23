@@ -22,6 +22,7 @@ const mockLogin = vi.fn();
 const mockLogout = vi.fn();
 const mockPublishRelease = vi.fn();
 const mockMarkStageComplete = vi.fn();
+const mockUpdateRelease = vi.fn();
 
 let mockCurrentUser = null;
 
@@ -32,6 +33,7 @@ vi.mock('../context/AppContext', () => ({
     logout: mockLogout,
     publishRelease: mockPublishRelease,
     markStageComplete: mockMarkStageComplete,
+    updateRelease: mockUpdateRelease,
     stages: [
       { id: 'stage-1', name: 'Idea Exploration', status: 'Completed', date: 'Aug 10, 2026', owner: 'Manya Kedia', version: 'v0.1', summary: 'Summary details', assets: [] },
       { id: 'stage-4', name: 'Planning V2', status: 'In Progress', date: 'Sep 10, 2026', owner: 'Aarav Sharma', version: 'v1.2', summary: 'Detailed specs', assets: [] }
@@ -159,6 +161,53 @@ describe('Frontend React Core User Interface Tests', () => {
     // Click button
     fireEvent.click(completeButton);
     expect(mockMarkStageComplete).toHaveBeenCalledWith('stage-4');
+  });
+
+  it('should let an admin edit release details and submit the changed values', async () => {
+    mockCurrentUser = { name: 'Manya Kedia', email: 'admin@workspace.edu', role: 'admin' };
+    mockParams = { id: 'stage-4' };
+
+    render(
+      <BrowserRouter>
+        <ThemeProvider>
+          <JourneyDetails />
+        </ThemeProvider>
+      </BrowserRouter>
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /edit release details/i }));
+
+    // Fields arrive pre-filled from the current milestone
+    const titleInput = screen.getByPlaceholderText(/architecture & schema specs/i);
+    const stageInput = screen.getByPlaceholderText(/planning v3/i);
+    const summaryInput = screen.getByPlaceholderText(/what changed in this release/i);
+    expect(stageInput.value).toBe('Planning V2');
+    expect(summaryInput.value).toBe('Detailed specs');
+
+    fireEvent.change(titleInput, { target: { value: 'Corrected Title' } });
+    fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
+
+    expect(mockUpdateRelease).toHaveBeenCalledWith('stage-4', {
+      title: 'Corrected Title',
+      stageName: 'Planning V2',
+      changeSummary: 'Detailed specs',
+      commit: ''
+    });
+  });
+
+  it('should hide the edit control from non-admin roles', () => {
+    mockCurrentUser = { name: 'Aarav Sharma', email: 'student@workspace.edu', role: 'user' };
+    mockParams = { id: 'stage-4' };
+
+    render(
+      <BrowserRouter>
+        <ThemeProvider>
+          <JourneyDetails />
+        </ThemeProvider>
+      </BrowserRouter>
+    );
+
+    expect(screen.queryByRole('button', { name: /edit release details/i })).not.toBeInTheDocument();
   });
 
   it('should hide completion triggers on In Progress milestones for non-admin roles', () => {

@@ -140,6 +140,7 @@ Read endpoints are public. Write endpoints require a bearer token from a user wh
 | GET    | /api/activities             | Public | Activity feed                                      |
 | GET    | /api/releases               | Public | List published releases and their assets           |
 | POST   | /api/releases               | Admin  | Publish a release inside a SQL transaction         |
+| PATCH  | /api/releases/:id           | Admin  | Edit a published release across all its records    |
 | DELETE | /api/releases/:id           | Admin  | Delete a release and every record derived from it  |
 | POST   | /api/files/upload           | Admin  | Stage an uploaded deliverable file (50 MB limit)   |
 | GET    | /api/files/:id              | Public | Redirect to a deliverable file URL                 |
@@ -149,7 +150,7 @@ Read endpoints are public. Write endpoints require a bearer token from a user wh
 
 ## Role Model
 
-- `admin`: full access, including publishing releases, deleting releases, marking milestones complete, and managing stored files.
+- `admin`: full access, including publishing releases, editing and deleting them, marking milestones complete, and managing stored files.
 - `instructor`: authenticated read access; no write endpoints.
 - `user`: default role for every self-registered and Google-authenticated account.
 

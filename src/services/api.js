@@ -98,6 +98,12 @@ export const api = {
     body: pubData
   }),
 
+  // Edit an existing release publication (atomic pg transaction)
+  updateRelease: (id, pubData) => request(`/releases/${id}`, {
+    method: 'PATCH',
+    body: pubData
+  }),
+
   // Delete Release publication (atomic pg transaction)
   deletePublication: (id) => request(`/releases/${id}`, {
     method: 'DELETE'

@@ -119,6 +119,18 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Edit an existing release trigger
+  const updateRelease = async (id, releaseData) => {
+    try {
+      const cleanId = id.toString().replace('pub-', '');
+      const res = await api.updateRelease(cleanId, releaseData);
+      await loadDatabaseRecords();
+      return res;
+    } catch (err) {
+      throw new Error(err.message || 'Update failed.');
+    }
+  };
+
   // Delete release trigger
   const deletePublication = async (id) => {
     try {
@@ -159,6 +171,7 @@ export const AppProvider = ({ children }) => {
       loginWithOAuth,
       logout,
       publishRelease,
+      updateRelease,
       deletePublication,
       markStageComplete,
       refreshData: loadDatabaseRecords
