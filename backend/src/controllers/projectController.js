@@ -34,50 +34,34 @@ export const getTeamMembers = async (req, res) => {
   try {
     const team = [
       {
+        id: "akshat",
+        name: "Akshat",
+        role: "Machine Learning Engineer",
+        technicalSkills: ["Python", "PyTorch", "Data Preprocessing", "Feature Engineering", "Model Deployment"],
+        initials: "AK",
+        color: "#B8863B"
+      },
+      {
         id: "manya",
         name: "Manya Kedia",
-        role: "Lead Systems Architect & PM",
-        primaryResponsibility: "Relational database schema modeling, deployment configuration, and pipeline releases.",
-        currentSprint: "Staging Pipeline Refinement",
-        technicalSkills: ["PostgreSQL", "Docker", "Git Actions", "System Design", "Vite Compiler"],
-        currentTask: "Configuring the automated publication pipeline validators inside the Release Control Center.",
-        currentFocus: "Verifying multi-asset document browser integrations and state update routes.",
+        role: "Backend Engineer",
+        technicalSkills: ["Node.js", "Express", "PostgreSQL", "REST API Design", "Docker"],
         initials: "MK",
         color: "#49796B"
       },
       {
         id: "rudraksh",
-        name: "Rudraksh",
-        role: "Full Stack Engineer",
-        primaryResponsibility: "State synchronization components, responsive views layout styling, and backend APIs.",
-        currentSprint: "Documentation UI Overhaul",
-        technicalSkills: ["React", "Tailwind CSS", "Node.js", "Express", "Database Queries"],
-        currentTask: "Refactoring the scrollspy navigation panel and slideshow preview handlers.",
-        currentFocus: "Extracting styling utilities into global tokens variables to prevent CSS duplication.",
+        name: "Rudraksh Chugh",
+        role: "Machine Learning Engineer",
+        technicalSkills: ["Python", "PyTorch", "scikit-learn", "Pandas & NumPy", "Model Evaluation"],
         initials: "RC",
         color: "#3F7D58"
       },
       {
-        id: "akshat",
-        name: "Akshat",
-        role: "Frontend Developer",
-        primaryResponsibility: "User interface design, accessibility, and client-side logic.",
-        currentSprint: "UI Component Library",
-        technicalSkills: ["React", "Framer Motion", "CSS Variables", "UI/UX", "A11y ARIA"],
-        currentTask: "Implementing responsive design breakpoints across the dashboard.",
-        currentFocus: "Enhancing the visual consistency of the project portfolio.",
-        initials: "AK",
-        color: "#B8863B"
-      },
-      {
         id: "sneha",
         name: "Sneha Choudhary",
-        role: "Backend & Security Engineer",
-        primaryResponsibility: "Access control middleware APIs, secure storage, and testing frameworks.",
-        currentSprint: "Access Credentials Audit",
-        technicalSkills: ["REST API", "Database Security", "JSON Web Tokens", "Authentication", "Testing"],
-        currentTask: "Implementing JWT validation guards and mock data sandbox endpoints.",
-        currentFocus: "Securing document file upload parameters from directory traversal bugs.",
+        role: "Frontend Engineer",
+        technicalSkills: ["React", "JavaScript", "Responsive Design", "State Management", "Component Testing"],
         initials: "SC",
         color: "#7B68EE"
       }

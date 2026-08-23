@@ -8,7 +8,7 @@
 INSERT INTO users (id, name, email, password_hash, role) VALUES
 (1, 'Manya Kedia', 'admin@workspace.edu', '$2a$10$a1A6H/uQ2bV3nS6X7oJbNu/u6zM8qfT/N4bB/c8f2l8e1tKkLg6C2', 'admin'),
 (2, 'Instructor Profile', 'instructor@workspace.edu', '$2a$10$T1K7I6L1b2n3m4o5p6q7ru31L1zH/h1jG3C2n3V1W41yZ41wW4123', 'instructor'),
-(3, 'Aarav Sharma', 'student@workspace.edu', '$2a$10$L0xP2.m0k0Q8W4/y1m027e31n0G2h31L3iR2n3W41yZ41wW41234', 'student');
+(3, 'Aarav Sharma', 'student@workspace.edu', '$2a$10$L0xP2.m0k0Q8W4/y1m027e31n0G2h31L3iR2n3W41yZ41wW41234', 'user');
 
 SELECT setval('users_id_seq', 3);
 

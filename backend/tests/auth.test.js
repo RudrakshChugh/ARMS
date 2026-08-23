@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import app from '../src/server.js';
 import jwt from 'jsonwebtoken';
+import db from '../src/config/db.js';
 
 describe('Backend Authentication API Tests', () => {
   // 1. Valid Admin Login
@@ -53,7 +54,27 @@ describe('Backend Authentication API Tests', () => {
     expect(res.body.error).toContain('Invalid login email or password.');
   });
 
-  // 5. Nonexistent Email
+  // 5. OAuth-only account attempting password login (password_hash is NULL)
+  it('should reject password login against an OAuth-only account with 401, not 500', async () => {
+    const saved = await db.query("SELECT password_hash FROM users WHERE email = 'instructor@workspace.edu'");
+    await db.query("UPDATE users SET password_hash = NULL, auth_provider = 'google' WHERE email = 'instructor@workspace.edu'");
+
+    try {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'instructor@workspace.edu', password: 'anything' });
+
+      expect(res.status).toBe(401);
+      expect(res.body.error).toContain('Invalid login email or password');
+    } finally {
+      await db.query(
+        "UPDATE users SET password_hash = $1, auth_provider = 'local' WHERE email = 'instructor@workspace.edu'",
+        [saved.rows[0].password_hash]
+      );
+    }
+  });
+
+  // 6. Nonexistent Email
   it('should reject login request with nonexistent email', async () => {
     const res = await request(app)
       .post('/api/auth/login')

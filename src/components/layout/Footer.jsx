@@ -21,10 +21,13 @@ export const Footer = () => {
           <Link to="/journey" className="hover:text-text-primary transition-colors duration-150">
             Journey
           </Link>
+          {/* TEMPORARILY DISABLED: Planning page is hidden — restore alongside the
+              route in App.jsx and the nav link in Navbar.jsx.
           <span className="text-border">·</span>
           <Link to="/planning" className="hover:text-text-primary transition-colors duration-150">
             Planning
           </Link>
+          */}
           <span className="text-border">·</span>
           <Link to="/team" className="hover:text-text-primary transition-colors duration-150">
             Team

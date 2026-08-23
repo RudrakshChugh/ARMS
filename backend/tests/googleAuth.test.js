@@ -144,7 +144,30 @@ describe('Google Authentication & Database Roles API Tests', () => {
       .post('/api/auth/google/token')
       .send({ code: authCode });
     expect(tokenRes2.status).toBe(400);
-    expect(tokenRes2.body.error).toContain('invalid or has already been used');
+    expect(tokenRes2.body.error).toContain('already been used');
+  });
+
+  // 7.1 Codes past their TTL are rejected and purged
+  it('should reject and purge short-lived authorization codes past their TTL', async () => {
+    const callbackRes = await request(app)
+      .get('/api/auth/google/callback?code=mock-new-code');
+
+    const urlParams = new URLSearchParams(callbackRes.headers.location.split('?')[1]);
+    const authCode = urlParams.get('code');
+
+    // Age the code well beyond the 5 minute redemption window
+    await db.query("UPDATE auth_codes SET created_at = NOW() - INTERVAL '10 minutes' WHERE code = $1", [authCode]);
+
+    const tokenRes = await request(app)
+      .post('/api/auth/google/token')
+      .send({ code: authCode });
+
+    expect(tokenRes.status).toBe(400);
+    expect(tokenRes.body.error).toContain('expired');
+
+    // The stale row must be gone, not merely refused
+    const remaining = await db.query('SELECT code FROM auth_codes WHERE code = $1', [authCode]);
+    expect(remaining.rows.length).toBe(0);
   });
 
   // 8. Role Authorization Rules - Admin can access admin endpoint

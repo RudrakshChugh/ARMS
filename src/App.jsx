@@ -15,7 +15,10 @@ import { Search, Eye, Sparkles, Layers, Sliders, Laptop, ChevronRight } from 'lu
 import Home from './pages/Home';
 import Journey from './pages/Journey';
 import JourneyDetails from './pages/JourneyDetails';
-import Planning from './pages/Planning';
+// TEMPORARILY DISABLED: Planning page is hidden but kept in the codebase.
+// To restore: uncomment this import, its <Route> below, the nav link in Navbar.jsx,
+// and the footer link in Footer.jsx.
+// import Planning from './pages/Planning';
 import Versions from './pages/Versions';
 import Team from './pages/Team';
 import ReleaseControl from './pages/ReleaseControl';
@@ -355,7 +358,7 @@ const AppContent = () => {
           <Route path="/journey" element={<Journey />} />
           <Route path="/journey/:id" element={<JourneyDetails />} />
           
-          <Route path="/planning" element={<Planning />} />
+          {/* TEMPORARILY DISABLED: <Route path="/planning" element={<Planning />} /> */}
           <Route path="/versions" element={<Versions />} />
           <Route path="/team" element={<Team />} />
 

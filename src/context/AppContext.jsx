@@ -34,7 +34,13 @@ export const AppProvider = ({ children }) => {
       setPublications(pList);
       setActivities(aList);
       setStages(sList);
-      setTeamMembers(tList);
+      // Sort here rather than in each page so the Team page, the homepage roster and
+      // the global search all agree, whatever order the backend happens to return.
+      setTeamMembers(
+        Array.isArray(tList)
+          ? [...tList].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+          : []
+      );
       setResponsibilityMatrix(mList);
       setProjectIdeas(iList);
 

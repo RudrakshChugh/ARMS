@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 import db from '../config/db.js';
 import crypto from 'crypto';
 
+// How long a Google authorization code stays redeemable. The frontend redeems it
+// on the very next page load, so this only needs to cover the redirect round trip.
+const AUTH_CODE_TTL_MINUTES = 5;
+
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -17,6 +21,14 @@ export const login = async (req, res) => {
     }
 
     const user = userRes.rows[0];
+
+    // OAuth-only accounts have no password_hash; bcrypt.compare would throw on null.
+    // Answer with the same generic message so the response cannot be used to probe
+    // which addresses are registered through Google.
+    if (!user.password_hash) {
+      return res.status(401).json({ error: 'Invalid login email or password.' });
+    }
+
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({ error: 'Invalid login email or password.' });
@@ -220,12 +232,13 @@ export const googleCallback = async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Save temporary short-lived single-use authorization code
+    // Save temporary short-lived single-use authorization code.
+    // created_at is left to the column default so it is stamped by the database
+    // clock, which is the same clock the expiry check in exchangeToken reads.
     const authCode = crypto.randomUUID();
-    const now = new Date().toISOString();
     await db.query(
-      'INSERT INTO auth_codes (code, jwt, created_at) VALUES ($1, $2, $3)',
-      [authCode, token, now]
+      'INSERT INTO auth_codes (code, jwt) VALUES ($1, $2)',
+      [authCode, token]
     );
 
     // Redirect to frontend callback page with authorization code
@@ -245,12 +258,19 @@ export const exchangeToken = async (req, res) => {
   }
 
   try {
+    // Drop anything past its lifetime first, so abandoned handshakes cannot pile
+    // up in the table indefinitely holding usable session tokens.
+    await db.query(
+      'DELETE FROM auth_codes WHERE created_at < NOW() - make_interval(mins => $1)',
+      [AUTH_CODE_TTL_MINUTES]
+    );
+
     // Retrieve and immediately delete to enforce single-use constraint
     const codeRes = await db.query('DELETE FROM auth_codes WHERE code = $1 RETURNING jwt', [code]);
     const row = codeRes.rows[0];
 
     if (!row) {
-      return res.status(400).json({ error: 'Authorization code is invalid or has already been used.' });
+      return res.status(400).json({ error: 'Authorization code is invalid, expired, or has already been used.' });
     }
 
     res.json({ token: row.jwt });

@@ -19,7 +19,7 @@ CREATE TABLE users (
     password_hash VARCHAR(255),
     google_id VARCHAR(255) UNIQUE,
     auth_provider VARCHAR(50) DEFAULT 'local',
-    role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'student', 'instructor', 'admin')),
+    role VARCHAR(50) DEFAULT 'user' CHECK (role IN ('user', 'instructor', 'admin')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

@@ -53,3 +53,5 @@ desktop.ini
 *.tmp
 *.temp
 *.swp
+# Vite scratch output
+vite.config.js.timestamp-*

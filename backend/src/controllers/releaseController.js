@@ -1,6 +1,4 @@
 import db from '../config/db.js';
-import fs from 'fs';
-import path from 'path';
 import storageService from '../services/storage/index.js';
 
 const cleanupUploadedFiles = async (assets) => {
@@ -278,7 +276,7 @@ export const deleteRelease = async (req, res) => {
 
     // 2. Fetch publication_files paths to clean up filesystem files after commit
     const fileRes = await client.query('SELECT path FROM publication_files WHERE publication_id = $1', [pubId]);
-    const filesToCleanup = fileRes.rows.map(f => f.path);
+    const filesToCleanup = fileRes.rows;
 
     // 3. Delete version record matching version
     await client.query('DELETE FROM project_versions WHERE version = $1 AND project_id = $2', [versionToDelete, projectId]);
@@ -303,10 +301,12 @@ export const deleteRelease = async (req, res) => {
     // Commit Transaction
     await client.query('COMMIT');
 
-    // 8. Physical files deletion from storage provider
-    for (const filePath of filesToCleanup) {
-      await storageService.deleteFile(filePath);
-    }
+    // 8. Physical files deletion from storage provider. This runs after COMMIT, so a
+    // storage failure must not reach the catch below: rolling back a committed
+    // transaction is a no-op and would report a successful deletion as a 500.
+    // cleanupUploadedFiles logs and swallows per-file errors, leaving at worst an
+    // orphaned object in the bucket.
+    await cleanupUploadedFiles(filesToCleanup);
 
     res.json({ success: true });
   } catch (err) {

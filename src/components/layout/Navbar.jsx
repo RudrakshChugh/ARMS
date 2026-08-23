@@ -5,6 +5,8 @@ import { Button } from '../ui/Button';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 
+const REPO_URL = 'https://github.com/RudrakshChugh/ARMS';
+
 export const Navbar = ({ onSearchClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -35,7 +37,7 @@ export const Navbar = ({ onSearchClick }) => {
   const navLinks = [
     { name: 'Overview', path: '/' },
     { name: 'Project Journey', path: '/journey' },
-    { name: 'Planning', path: '/planning' },
+    // TEMPORARILY DISABLED: { name: 'Planning', path: '/planning' },
     { name: 'Team', path: '/team' }
   ];
 
@@ -104,11 +106,11 @@ export const Navbar = ({ onSearchClick }) => {
 
             {/* Repository */}
             <a
-              href="https://github.com"
+              href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="p-sp-8 text-text-secondary hover:text-text-primary hover:bg-bg-secondary rounded-button transition-colors duration-150 cursor-pointer"
-              title="Repository"
+              title="GitHub Repository"
             >
               <Github className="w-4 h-4" />
             </a>
@@ -209,7 +211,7 @@ export const Navbar = ({ onSearchClick }) => {
           
           <div className="flex flex-col gap-sp-12 pt-sp-24 border-t border-border-subtle">
             <a
-              href="https://github.com"
+              href={REPO_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center justify-between p-sp-12 border border-border bg-bg-surface rounded-button text-meta text-text-secondary"

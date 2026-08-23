@@ -94,4 +94,34 @@ describe('Backend File Staging, Uploads & Content Retrieval API Tests', () => {
       fs.unlinkSync(physicalPath);
     });
   });
+
+  it('should reject a disallowed file extension with a 400 and a usable message', async () => {
+    const adminToken = await getAuthToken();
+
+    const uploadRes = await request(app)
+      .post('/api/files/upload')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .attach('file', Buffer.from('#!/bin/sh\necho hi'), 'payload.sh');
+
+    // Must be a client error carrying the reason, not an opaque 500
+    expect(uploadRes.status).toBe(400);
+    expect(uploadRes.body.error).toContain('File type rejected');
+  });
+
+  it('should reject unauthenticated and non-admin upload attempts', async () => {
+    const anonRes = await request(app)
+      .post('/api/files/upload')
+      .attach('file', Buffer.from('dummy'), 'test.pdf');
+    expect(anonRes.status).toBe(401);
+
+    const userLogin = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'student@workspace.edu', password: 'student123' });
+
+    const userRes = await request(app)
+      .post('/api/files/upload')
+      .set('Authorization', `Bearer ${userLogin.body.token}`)
+      .attach('file', Buffer.from('dummy'), 'test.pdf');
+    expect(userRes.status).toBe(403);
+  });
 });

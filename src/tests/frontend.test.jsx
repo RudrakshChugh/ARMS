@@ -162,7 +162,7 @@ describe('Frontend React Core User Interface Tests', () => {
   });
 
   it('should hide completion triggers on In Progress milestones for non-admin roles', () => {
-    mockCurrentUser = { name: 'Aarav Sharma', email: 'student@workspace.edu', role: 'student' };
+    mockCurrentUser = { name: 'Aarav Sharma', email: 'student@workspace.edu', role: 'user' };
     mockParams = { id: 'stage-4' };
 
     render(
