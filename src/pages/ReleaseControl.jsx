@@ -79,13 +79,27 @@ export default function ReleaseControl() {
     }
   };
 
-  // Stage drag-over drop handler
+  const [isDragActive, setIsDragActive] = useState(false);
+
+  // A drop only fires if the dragover default is cancelled, and the event must be
+  // stopped or the browser navigates away to open the dropped file.
   const handleDragOver = (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    if (!isDragActive) setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragActive(false);
   };
 
   const handleDrop = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
     if (e.dataTransfer.files) {
       const allowedFiles = [];
       const rejectedFiles = [];
@@ -475,9 +489,11 @@ export default function ReleaseControl() {
                 
                 {/* Upload drag drop panel */}
                 <div 
+                  onDragEnter={handleDragOver}
                   onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-container p-sp-32 text-center bg-bg-surface flex flex-col items-center justify-center gap-sp-12 transition-colors duration-200 select-none relative ${errors.files ? 'border-status-error' : 'border-border hover:border-accent'}`}
+                  className={`border-2 border-dashed rounded-container p-sp-32 text-center flex flex-col items-center justify-center gap-sp-12 transition-colors duration-200 select-none relative ${errors.files ? 'border-status-error bg-bg-surface' : isDragActive ? 'border-accent bg-accent-surface' : 'border-border hover:border-accent bg-bg-surface'}`}
                 >
                   <input
                     type="file"
@@ -489,7 +505,7 @@ export default function ReleaseControl() {
                   <UploadCloud className="w-10 h-10 text-accent" />
                   <div className="flex flex-col gap-sp-4">
                     <span className="text-body font-medium text-text-primary">
-                      Drag files here or click to stage
+                      {isDragActive ? 'Drop to stage' : 'Drag files here or click to stage'}
                     </span>
                     <span className="text-meta text-text-muted max-w-xs leading-normal">
                       Supported extensions: PDF, PPT/PPTX, PNG, JPG, SVG, MP4, Markdown notes.

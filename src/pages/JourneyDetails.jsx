@@ -24,6 +24,7 @@ export default function JourneyDetails() {
   const [editForm, setEditForm] = useState({ title: '', version: '', stageName: '', changeSummary: '', commit: '' });
   const [editAssets, setEditAssets] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
 
   const handleMarkComplete = async () => {
     try {
@@ -89,6 +90,11 @@ export default function JourneyDetails() {
   const handleAddFiles = async (e) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = '';
+    await uploadFiles(picked);
+  };
+
+  // Dropping onto the zone and picking through the dialog share this path
+  const uploadFiles = async (picked) => {
     if (picked.length === 0) return;
 
     const oversized = picked.filter(f => f.size > 50 * 1024 * 1024).map(f => f.name);
@@ -113,6 +119,30 @@ export default function JourneyDetails() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  // A drop only fires if the dragover default is cancelled on every frame, and the
+  // events must be stopped here or the browser navigates away to open the file.
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragActive) setIsDragActive(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Ignore the leave events fired while moving across child elements
+    if (e.currentTarget.contains(e.relatedTarget)) return;
+    setIsDragActive(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    if (isSaving || isUploading) return;
+    await uploadFiles(Array.from(e.dataTransfer?.files || []));
   };
 
   const removeAsset = async (idx) => {
@@ -436,9 +466,22 @@ export default function JourneyDetails() {
               </ul>
             )}
 
-            <label className="inline-flex items-center gap-sp-8 text-meta font-medium text-accent hover:text-accent-hover cursor-pointer w-fit">
-              <Plus className="w-3.5 h-3.5" />
-              {isUploading ? 'Uploading...' : 'Add files'}
+            <label
+              onDragEnter={handleDragOver}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`flex flex-col items-center justify-center gap-sp-6 border-2 border-dashed p-sp-24 text-center cursor-pointer transition-colors duration-150 ${
+                isDragActive ? 'border-accent bg-accent-surface' : 'border-border hover:border-accent bg-bg-surface'
+              }`}
+            >
+              <Plus className={`w-5 h-5 ${isDragActive ? 'text-accent' : 'text-text-muted'}`} />
+              <span className="text-meta font-medium text-text-primary">
+                {isUploading ? 'Uploading...' : isDragActive ? 'Drop to attach' : 'Drag files here or click to browse'}
+              </span>
+              <span className="text-xs text-text-muted">
+                PDF, PPT/PPTX, PNG, JPG, SVG, MP4, Markdown. Max 50 MB per file.
+              </span>
               <input
                 type="file"
                 multiple
@@ -449,7 +492,7 @@ export default function JourneyDetails() {
               />
             </label>
             <p className="text-xs text-text-muted">
-              Removed files are detached when you save. Max 50 MB per file.
+              Removed files are detached when you save.
             </p>
           </div>
 
