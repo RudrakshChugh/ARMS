@@ -5,6 +5,9 @@ import { BrowserRouter } from 'react-router-dom';
 import Login from '../pages/Login';
 import ReleaseControl from '../pages/ReleaseControl';
 import JourneyDetails from '../pages/JourneyDetails';
+import Home from '../pages/Home';
+import Architecture from '../pages/Architecture';
+import Team from '../pages/Team';
 import { Navbar } from '../components/layout/Navbar';
 import { ThemeProvider } from '../context/ThemeContext';
 
@@ -40,6 +43,7 @@ vi.mock('../context/AppContext', () => ({
     ],
     versions: [],
     publications: [],
+    activities: [],
     teamMembers: []
   })
 }));
@@ -229,5 +233,29 @@ describe('Frontend React Core User Interface Tests', () => {
     // Mark as Completed button must not render for student roles
     const completeButton = screen.queryByRole('button', { name: /mark as completed/i });
     expect(completeButton).not.toBeInTheDocument();
+  });
+
+  // 5. NOVA Project Documentation Pages Checks
+  it('should render NOVA overview, architecture, and team pages with roll numbers and no sample CollabSync content', () => {
+    render(
+      <BrowserRouter>
+        <ThemeProvider>
+          <Home />
+          <Architecture />
+          <Team />
+        </ThemeProvider>
+      </BrowserRouter>
+    );
+
+    expect(screen.getByRole('heading', { name: /NOVA: Assessment-Quality Platform/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Module Connections & Workflow/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Live NOVA Website/i })).toHaveAttribute('href', 'https://nova.rudrakshchugh005.workers.dev/');
+    expect(screen.getByText(/1024170128/i)).toBeInTheDocument();
+    expect(screen.getByText(/1024170130/i)).toBeInTheDocument();
+    expect(screen.getByText(/1024170133/i)).toBeInTheDocument();
+    expect(screen.getByText(/1024170147/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Platform Administrator/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Six Core Engineering Objectives/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CollabSync/i)).not.toBeInTheDocument();
   });
 });

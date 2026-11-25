@@ -1,7 +1,27 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
+import {
+  NOVA_STAGES,
+  NOVA_VERSIONS,
+  NOVA_ACTIVITIES,
+  NOVA_BID_CANDIDATES,
+  NOVA_TEAM_MEMBERS
+} from '../data/novaData';
 
 const AppContext = createContext();
+
+const isLegacySeedRecords = ({ vList, sList, iList }) => {
+  const hasLegacyProject = Array.isArray(iList) && iList.some(
+    (p) => p?.title === 'CollabSync' || p?.title === 'LabLock' || p?.title === 'PeerCode'
+  );
+  const hasLegacyStage = Array.isArray(sList) && sList.some(
+    (s) => s?.owner === 'Aarav Sharma' || s?.summary?.includes('CollabSync')
+  );
+  const hasLegacyVersion = Array.isArray(vList) && vList.some(
+    (v) => v?.author === 'Aarav Sharma' || v?.changeSummary?.includes('CollabSync')
+  );
+  return hasLegacyProject || hasLegacyStage || hasLegacyVersion;
+};
 
 export const AppProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
@@ -30,21 +50,44 @@ export const AppProvider = ({ children }) => {
         api.getProjects().catch(() => [])
       ]);
 
-      setVersions(vList);
-      setPublications(pList);
-      setActivities(aList);
-      setStages(sList);
+      const useNovaFallback = isLegacySeedRecords({ vList, sList, iList });
+
+      const resolvedVersions = useNovaFallback || !vList?.length ? NOVA_VERSIONS : vList;
+      const resolvedActivities = useNovaFallback || !aList?.length ? NOVA_ACTIVITIES : aList;
+      const resolvedStages = useNovaFallback || !sList?.length ? NOVA_STAGES : sList;
+      const resolvedIdeas = useNovaFallback || !iList?.length ? NOVA_BID_CANDIDATES : iList;
+      const resolvedTeam = Array.isArray(tList) && tList.length > 0
+        ? tList.map((member) => {
+            const firstWord = (member.name || '').toLowerCase().split(' ')[0];
+            const enrichment = NOVA_TEAM_MEMBERS.find(
+              (n) => n.id === member.id || n.name.toLowerCase().startsWith(firstWord)
+            );
+            return enrichment
+              ? {
+                  ...enrichment,
+                  ...member,
+                  name: enrichment.name,
+                  rollNumber: enrichment.rollNumber,
+                  role: enrichment.role,
+                  contribution: enrichment.contribution
+                }
+              : member;
+          })
+        : NOVA_TEAM_MEMBERS;
+
+      setVersions(resolvedVersions);
+      setPublications(useNovaFallback ? [] : pList);
+      setActivities(resolvedActivities);
+      setStages(resolvedStages);
       // Sort here rather than in each page so the Team page, the homepage roster and
       // the global search all agree, whatever order the backend happens to return.
       setTeamMembers(
-        Array.isArray(tList)
-          ? [...tList].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-          : []
+        [...resolvedTeam].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
       );
       setResponsibilityMatrix(mList);
-      setProjectIdeas(iList);
+      setProjectIdeas(resolvedIdeas);
 
-      const primary = iList.find(p => p.is_primary) || iList[0];
+      const primary = resolvedIdeas.find(p => p.is_primary) || resolvedIdeas[0];
       setPrimaryProject(primary);
     } catch (err) {
       console.error('Failed to sync databases records from backend:', err);

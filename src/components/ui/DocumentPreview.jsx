@@ -32,14 +32,14 @@ const MarkdownRenderer = ({ content = '' }) => {
   return <div className="prose max-w-none">{formattedElements}</div>;
 };
 
-// Local slideshow mockup for PPT presentation previewing
+// Presentation summary fallback when an uploaded deck cannot be embedded externally
 const SlideshowPreview = ({ assetName }) => {
   const [currentSlide, setCurrentSlide] = useState(1);
   const slides = [
-    { title: "Project Overview", bullet1: "Problem Statement: Collaborative workspace synchrony.", bullet2: "Goal: Browser sandbox compiler execution pipelines." },
-    { title: "System Architecture", bullet1: "Frontend: React, Tailwind CSS v4, Framer Motion.", bullet2: "Backend: WebSockets sync broker and Go execution API." },
-    { title: "Risk Mitigation", bullet1: "High Wi-Fi latency fallbacks.", bullet2: "Local browser WebAssembly sandboxes." },
-    { title: "Timeline Milestones", bullet1: "Planning spec completion.", bullet2: "Midterm prototype compilation schedules." }
+    { title: "NOVA: Assessment-Quality Platform", bullet1: "Problem: Bloom drift, PYQ repetition, and ungrounded hallucinations.", bullet2: "Scope: Audited faculty authoring and immutable question banks." },
+    { title: "System Architecture", bullet1: "Frontend: React 19 + Vite SPA served via Cloudflare Worker.", bullet2: "Backend: FastAPI, ONNX Runtime (all-MiniLM-L6-v2), PostgreSQL + pgvector." },
+    { title: "Verification & Repair", bullet1: "6 deterministic rules (<5 ms) with zero LLM self-grading.", bullet2: "Bounded 2-attempt error-feedback repair loop (94.2% compliance)." },
+    { title: "Novelty & Ranking", bullet1: "4-signal PYQ audit (Cosine, BM25, Jaccard, Numerical; 0.4881 threshold).", bullet2: "LightGBM pairwise reviewer ranker and ReportLab PDF export." }
   ];
 
   const handleNext = () => {
@@ -53,13 +53,13 @@ const SlideshowPreview = ({ assetName }) => {
   const activeSlide = slides[currentSlide - 1];
 
   return (
-    <div className="flex flex-col border border-border-default rounded-card overflow-hidden bg-bg-main">
+    <div className="flex flex-col border border-border rounded-card overflow-hidden bg-bg-main">
       {/* Slide Canvas */}
-      <div className="flex flex-col items-center justify-center p-sp-48 text-center min-h-[320px] bg-white border-b border-border-subtle relative select-none">
+      <div className="flex flex-col items-center justify-center p-sp-48 text-center min-h-[320px] bg-bg-surface border-b border-border-subtle relative select-none">
         <span className="absolute top-sp-16 left-sp-24 text-[10px] font-mono text-text-muted font-bold tracking-widest uppercase">
-          {assetName} (MOCK)
+          {assetName}
         </span>
-        <h4 className="text-section font-bold text-accent-primary tracking-tight mb-sp-24">
+        <h4 className="text-section font-bold text-accent tracking-tight mb-sp-24">
           {activeSlide.title}
         </h4>
         <div className="flex flex-col gap-sp-8 text-body text-text-secondary max-w-md">
@@ -226,24 +226,21 @@ export const DocumentPreview = ({ assets = [], className = '' }) => {
       case 'svg':
         return (
           <div className="flex flex-col gap-sp-12">
-            <div className="border border-border-default rounded-card bg-white p-sp-16 flex items-center justify-center min-h-[320px]">
-              {/* Geometric fallback image block with CSS token coloring */}
-              <div className="w-full h-72 border border-border-subtle rounded-card bg-bg-main relative flex items-center justify-center overflow-hidden">
-                <div className="absolute inset-0 bg-accent-light/10 border-2 border-dashed border-accent-primary/20 rounded-card m-sp-16 flex flex-col items-center justify-center gap-sp-12 text-center">
-                  <ImageIcon className="w-8 h-8 text-accent-primary" />
-                  <span className="text-meta font-semibold text-text-primary">{activeAsset.name}</span>
-                  <span className="text-[10px] text-text-muted font-mono uppercase tracking-widest">Image preview placeholder</span>
-                </div>
-              </div>
+            <div className="border border-border rounded-card bg-bg-surface p-sp-16 flex items-center justify-center min-h-[320px]">
+              <img
+                src={resolveAssetPath(activeAsset)}
+                alt={activeAsset.name}
+                className="max-h-[480px] w-auto object-contain"
+              />
             </div>
-            <div className="flex justify-between items-center bg-bg-secondary p-sp-12 rounded border border-border-default text-meta">
+            <div className="flex justify-between items-center bg-bg-secondary p-sp-12 rounded border border-border text-meta">
               <span className="text-text-secondary truncate font-mono">{activeAsset.name}</span>
               <a 
                 href={resolveAssetPath(activeAsset)} 
                 target="_blank" 
                 rel="noopener noreferrer" 
                 download 
-                className="flex items-center gap-sp-8 text-accent-primary font-semibold hover:text-accent-hover transition-colors"
+                className="flex items-center gap-sp-8 text-accent font-semibold hover:text-accent-hover transition-colors"
               >
                 <Download className="w-4 h-4" /> Download Image Asset
               </a>

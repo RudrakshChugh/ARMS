@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { useApp } from '../../context/AppContext';
 import { useTheme } from '../../context/ThemeContext';
 
-const REPO_URL = 'https://github.com/RudrakshChugh/ARMS';
+const REPO_URL = 'https://github.com/RudrakshChugh/NOVA';
 
 export const Navbar = ({ onSearchClick }) => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -36,8 +36,8 @@ export const Navbar = ({ onSearchClick }) => {
 
   const navLinks = [
     { name: 'Overview', path: '/' },
-    { name: 'Project Journey', path: '/journey' },
-    // TEMPORARILY DISABLED: { name: 'Planning', path: '/planning' },
+    { name: 'Architecture', path: '/architecture' },
+    { name: 'Journey', path: '/journey' },
     { name: 'Team', path: '/team' }
   ];
 
@@ -61,12 +61,15 @@ export const Navbar = ({ onSearchClick }) => {
           {/* Left: Wordmark */}
           <Link to="/" className="flex items-center gap-sp-8 group select-none shrink-0">
             <span className="font-serif text-[28px] tracking-widest uppercase font-normal text-text-primary group-hover:text-accent transition-colors duration-300">
-              ARMS
+              NOVA
+            </span>
+            <span className="hidden xl:inline font-mono text-[10px] tracking-widest uppercase text-text-muted border-l border-border pl-sp-8">
+              Team ARMS
             </span>
           </Link>
 
           {/* Center: Desktop Navigation Links */}
-          <div className="hidden lg:flex items-center gap-[40px]">
+          <div className="hidden lg:flex items-center gap-[28px] xl:gap-[36px]">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
@@ -110,7 +113,7 @@ export const Navbar = ({ onSearchClick }) => {
               target="_blank"
               rel="noopener noreferrer"
               className="p-sp-8 text-text-secondary hover:text-text-primary hover:bg-bg-secondary rounded-button transition-colors duration-150 cursor-pointer"
-              title="GitHub Repository"
+              title="NOVA GitHub Repository"
             >
               <Github className="w-4 h-4" />
             </a>
@@ -216,7 +219,7 @@ export const Navbar = ({ onSearchClick }) => {
               rel="noopener noreferrer"
               className="flex items-center justify-between p-sp-12 border border-border bg-bg-surface rounded-button text-meta text-text-secondary"
             >
-              <span>GitHub Repository</span>
+              <span>NOVA GitHub Repository</span>
               <Github className="w-4 h-4" />
             </a>
             

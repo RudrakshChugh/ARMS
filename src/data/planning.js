@@ -143,10 +143,10 @@ export const planningData = {
   },
   "v2.0": {
     version: "v2.0",
-    date: "Sep 10, 2026",
-    author: "Rohan Varma",
-    commit: "9c8b7a6",
-    status: "Revision",
+    date: "Nov 24, 2026",
+    author: "Team ARMS",
+    commit: "b60e314",
+    status: "Active",
     sections: [
       {
         id: "overview",
@@ -284,13 +284,13 @@ export const planningData = {
       {
         id: "deployment",
         title: "Deployment Plan",
-        lastModified: "Sep 10, 2026",
+        lastModified: "Nov 24, 2026",
         version: "v2.0",
         status: "Active",
-        text: "Automated compiler distribution loading files directly into Vercel staging networks.",
+        text: "Containerized backend on Render Cloud with Neon Serverless PostgreSQL (pgvector) and static React 19 SPA delivery on Cloudflare Worker.",
         bullets: [
-          "GitHub actions pipeline compiling and staging releases.",
-          "Production builds deployed onto AWS S3 and served via CloudFront."
+          "Multi-stage Dockerfile packaging Python 3.14, FastAPI, and pre-fetched ONNX weights.",
+          "Render blueprint (render.yaml) and Cloudflare Worker configuration (wrangler.jsonc)."
         ]
       }
     ]

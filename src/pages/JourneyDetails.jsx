@@ -219,18 +219,23 @@ export default function JourneyDetails() {
             </h1>
           </div>
           <div className="flex flex-wrap gap-sp-12">
-            {stage.assets && stage.assets.length > 0 && (
-              <a 
-                href="#" 
-                onClick={(e) => {
-                  e.preventDefault();
-                  alert(`Downloading ${stage.assets.length} file assets package.`);
+            {stage.assets && stage.assets.length > 0 && stage.assets.some(a => a.id || (a.path && !a.path.startsWith('#'))) && (
+              <Button
+                variant="outline"
+                icon={Download}
+                className="!h-sp-32 !px-sp-12 !text-meta"
+                onClick={() => {
+                  const backendBase = (import.meta.env.VITE_API_URL || 'https://rudraksh.alwaysdata.net/api').replace('/api', '');
+                  stage.assets.forEach((asset) => {
+                    const url = asset.id ? `${backendBase}/api/files/${asset.id}` : asset.path;
+                    if (url && !url.startsWith('#')) {
+                      window.open(url, '_blank', 'noopener,noreferrer');
+                    }
+                  });
                 }}
               >
-                <Button variant="outline" icon={Download} className="!h-sp-32 !px-sp-12 !text-meta">
-                  Download Original Files
-                </Button>
-              </a>
+                Open Published Files
+              </Button>
             )}
           </div>
         </header>

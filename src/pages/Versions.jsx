@@ -9,12 +9,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 export default function Versions() {
   const { versions, stages } = useApp();
   
-  // States for timeline collapses
-  const [expandedVer, setExpandedVer] = useState("v1.2");
+  // States for timeline collapses & comparison selectors
+  const [expandedVer, setExpandedVer] = React.useState(versions[0]?.version || "v1.0");
+  const [verA, setVerA] = React.useState(versions[0]?.version || "v1.0");
+  const [verB, setVerB] = React.useState(versions[versions.length - 1]?.version || "v0.1");
 
-  // States for comparisons
-  const [verA, setVerA] = useState("v1.2");
-  const [verB, setVerB] = useState("v1.0");
+  React.useEffect(() => {
+    if (versions.length > 0 && !versions.some(v => v.version === verA)) {
+      setExpandedVer(versions[0].version);
+      setVerA(versions[0].version);
+      setVerB(versions[versions.length - 1].version);
+    }
+  }, [versions, verA]);
 
   const getMilestoneName = (ver) => {
     const matched = stages.find(s => s.version === ver);

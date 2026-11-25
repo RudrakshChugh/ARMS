@@ -1,55 +1,43 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Card, CardHeader, CardBody } from './Card';
+import { NOVA_BID_CANDIDATES, NOVA_COMPARISON_MATRIX } from '../../data/novaData';
+import { Card, CardBody } from './Card';
 import { Badge } from './Badge';
-import { Check, ShieldAlert, Zap, Award, Target, HelpCircle } from 'lucide-react';
+import { Award } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function SoftwareGridSection() {
-  const { projectIdeas, responsibilityMatrix } = useApp();
-  const [selectedProjectId, setSelectedProjectId] = useState('idea-3'); // Default to CollabSync (idea-3)
+  const { projectIdeas } = useApp();
+  const candidates =
+    projectIdeas &&
+    projectIdeas.length > 0 &&
+    projectIdeas.some((p) => p.title === 'NOVA')
+      ? projectIdeas
+      : NOVA_BID_CANDIDATES;
 
-  // Pre-configured comparison columns and metric rows
-  const comparisonMatrix = {
-    columns: ["CollabSync (Selected)", "LabLock", "PeerCode", "GradeWise"],
-    rows: [
-      { metric: "Core Technical Complexity", values: ["High (Real-time Websockets + Sandbox compiler)", "Medium (Hardware IoT scheduling integration)", "Medium (Docker compiler environment)", "Low (Relational database queries)"] },
-      { metric: "Course Validation Feasibility", values: ["Excellent (Easy local peer demonstration)", "Hard (Requires RFID lock readers)", "Medium (Requires TA review workflows)", "Medium (Requires historical grading pools)"] },
-      { metric: "Course Curriculum Relevance", values: ["High (System design, sync architecture, multi-user)", "Medium (Web portal + hardware scheduling)", "High (Developer audit reviews)", "Low (Simple data CRUD sheet)"] },
-      { metric: "Deployment Verification Risk", values: ["Low (Standard hosting containers)", "High (Physical lab installation)", "Medium (Docker container execution safety)", "Low (Static web hosting details)"] }
-    ]
-  };
+  const [selectedProjectId, setSelectedProjectId] = useState(
+    candidates.find((p) => p.is_primary)?.id || candidates[0]?.id || 'idea-1'
+  );
 
-  const activeProject = projectIdeas.find(p => p.id === selectedProjectId);
-
-  const getFeasibilityVariant = (val) => {
-    if (val === 'High' || val === 'Excellent') return 'success';
-    if (val === 'Medium') return 'warning';
-    return 'error';
-  };
-
-  const getRiskVariant = (val) => {
-    if (val === 'Low') return 'success';
-    if (val === 'Medium') return 'warning';
-    return 'error';
-  };
+  const activeProject =
+    candidates.find((p) => p.id === selectedProjectId) || candidates[0];
 
   return (
     <div className="font-sans flex flex-col gap-sp-48 min-w-0">
-      
-      {/* Editorial Headline */}
       <div>
-        <h3 className="text-card font-semibold text-text-primary tracking-tight">Software Grid Matrix</h3>
+        <h3 className="text-card font-semibold text-text-primary tracking-tight">
+          Software Bid &amp; Selection Matrix
+        </h3>
         <p className="text-meta text-text-secondary mt-sp-4">
-          Four course projects evaluated. One pursuing primary system focus.
+          Four candidate projects evaluated in UCS503; NOVA was approved as the primary system.
         </p>
       </div>
 
       {/* Grid of 4 Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-sp-16">
-        {projectIdeas.map((proj) => {
-          const isSelected = proj.id === selectedProjectId;
-          const isSelectedNo1 = proj.is_primary;
+        {candidates.map((proj) => {
+          const isSelected = proj.id === activeProject?.id;
+          const isPrimary = proj.is_primary;
 
           return (
             <Card
@@ -57,34 +45,34 @@ export function SoftwareGridSection() {
               hoverable
               onClick={() => setSelectedProjectId(proj.id)}
               className={`flex flex-col h-full relative transition-all cursor-pointer ${
-                isSelected 
-                  ? 'border-accent-primary ring-2 ring-accent-light' 
-                  : isSelectedNo1
-                  ? 'border-accent-primary/60 bg-accent-light/5'
+                isSelected
+                  ? 'border-accent ring-2 ring-accent/20'
+                  : isPrimary
+                  ? 'border-accent/60 bg-accent-surface/30'
                   : ''
               }`}
             >
-              {isSelectedNo1 && (
-                <div className="absolute top-sp-12 right-sp-12 text-accent-primary" title="Selected Primary Project">
-                  <Award className="w-4 h-4 fill-accent-light" />
+              {isPrimary && (
+                <div className="absolute top-sp-12 right-sp-12 text-accent" title="Approved Primary Project">
+                  <Award className="w-4 h-4" />
                 </div>
               )}
-              
+
               <CardBody className="flex flex-col gap-sp-12 flex-1 justify-between text-meta p-sp-16">
                 <div className="flex flex-col gap-sp-8">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-sp-6 pr-sp-20">
                     <span className="font-mono text-[10px] font-bold text-text-secondary uppercase">
                       {proj.tag}
                     </span>
                     <Badge variant={proj.is_primary ? 'accent' : 'default'}>
-                      {proj.is_primary ? 'Selected' : 'Candidate'}
+                      {proj.is_primary ? 'Approved' : 'Candidate'}
                     </Badge>
                   </div>
-                  
+
                   <h4 className="font-semibold text-text-primary mt-sp-4 leading-snug">
                     {proj.title}
                   </h4>
-                  
+
                   <p className="text-[11px] text-text-secondary line-clamp-3 leading-normal">
                     {proj.subtitle}
                   </p>
@@ -111,43 +99,48 @@ export function SoftwareGridSection() {
             exit={{ opacity: 0, y: -12 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
           >
-            <Card className="border border-accent-primary/30 shadow-subtle bg-white overflow-hidden text-meta">
-              
-              <div className="bg-bg-elevated border-b border-border-subtle p-sp-16 flex flex-col sm:flex-row sm:items-center justify-between gap-sp-12">
-                <div className="flex flex-col gap-sp-2">
+            <Card className="border border-accent/30 bg-bg-surface overflow-hidden text-meta">
+              <div className="bg-bg-secondary border-b border-border-subtle p-sp-16 flex flex-col sm:flex-row sm:items-center justify-between gap-sp-12">
+                <div className="flex flex-col gap-sp-4">
                   <div className="flex items-center gap-sp-8">
-                    <span className="font-mono text-[10px] font-bold text-accent-primary uppercase">EVALUATION SPECIFICATION</span>
-                    {activeProject.is_primary && <Badge variant="accent">Pursuing Project</Badge>}
+                    <span className="font-mono text-[10px] font-bold text-accent uppercase">
+                      BID SPECIFICATION
+                    </span>
+                    {activeProject.is_primary && <Badge variant="accent">Approved System</Badge>}
                   </div>
                   <h4 className="font-semibold text-text-primary text-body">{activeProject.title}</h4>
                 </div>
               </div>
 
-              <CardBody className="grid grid-cols-1 md:grid-cols-2 gap-sp-24 p-sp-24 border-b border-border-subtle leading-relaxed">
+              <CardBody className="grid grid-cols-1 md:grid-cols-2 gap-sp-24 p-sp-24 leading-relaxed">
                 <div className="flex flex-col gap-sp-16">
                   <div className="flex flex-col gap-sp-4">
                     <span className="font-bold text-text-primary">Problem Statement</span>
                     <p className="text-text-secondary">{activeProject.problem}</p>
                   </div>
                   <div className="flex flex-col gap-sp-4">
-                    <span className="font-bold text-text-primary">Target Audience</span>
+                    <span className="font-bold text-text-primary">Target Users</span>
                     <p className="text-text-secondary">{activeProject.target_audience}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-col gap-sp-16">
                   <div className="flex flex-col gap-sp-4">
-                    <span className="font-bold text-text-primary">Technical Stack Stack</span>
+                    <span className="font-bold text-text-primary">Technical Stack</span>
                     <div className="flex flex-wrap gap-sp-8 mt-sp-4">
-                      {activeProject.technical_stack && JSON.parse(JSON.stringify(activeProject.technical_stack)).map((tech, idx) => (
-                        <span key={idx} className="bg-bg-secondary px-sp-8 py-sp-4 border border-border-default rounded text-[11px] font-mono text-text-primary">
-                          {tech}
-                        </span>
-                      ))}
+                      {Array.isArray(activeProject.technical_stack) &&
+                        activeProject.technical_stack.map((tech, idx) => (
+                          <span
+                            key={idx}
+                            className="bg-bg-secondary px-sp-8 py-sp-4 border border-border rounded text-[11px] font-mono text-text-primary"
+                          >
+                            {tech}
+                          </span>
+                        ))}
                     </div>
                   </div>
                   <div className="flex flex-col gap-sp-4">
-                    <span className="font-bold text-text-primary">Mitigation Fallback</span>
+                    <span className="font-bold text-text-primary">Mitigation &amp; Feasibility</span>
                     <p className="text-text-secondary">{activeProject.risk_mitigation}</p>
                   </div>
                 </div>
@@ -162,17 +155,17 @@ export function SoftwareGridSection() {
         <div>
           <h4 className="font-semibold text-text-primary text-body">Comparison Matrix Table</h4>
           <p className="text-meta text-text-secondary mt-sp-4">
-            Granular rating evaluating ideas against course constraints.
+            Evaluation of candidate proposals against UCS503 feasibility and engineering rigor criteria.
           </p>
         </div>
 
-        <div className="border border-border-default bg-white rounded-card overflow-hidden">
+        <div className="border border-border bg-bg-surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-meta text-left border-collapse">
               <thead>
-                <tr className="bg-bg-elevated border-b border-border-default font-mono uppercase tracking-wider text-[10px] text-text-secondary">
+                <tr className="bg-bg-secondary border-b border-border font-mono uppercase tracking-wider text-[10px] text-text-secondary">
                   <th className="p-sp-12 font-semibold min-w-[150px]">Metric</th>
-                  {comparisonMatrix.columns.map((col, idx) => (
+                  {NOVA_COMPARISON_MATRIX.columns.map((col, idx) => (
                     <th key={idx} className="p-sp-12 font-semibold text-center">
                       {col}
                     </th>
@@ -180,22 +173,19 @@ export function SoftwareGridSection() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
-                {comparisonMatrix.rows.map((row, rIdx) => (
-                  <tr key={rIdx} className="hover:bg-bg-main/35 transition-colors">
+                {NOVA_COMPARISON_MATRIX.rows.map((row, rIdx) => (
+                  <tr key={rIdx} className="hover:bg-bg-secondary/40 transition-colors">
                     <td className="p-sp-12 font-medium text-text-primary">{row.metric}</td>
-                    {row.values.map((val, cIdx) => {
-                      const isNo1Column = cIdx === 0;
-                      return (
-                        <td 
-                          key={cIdx} 
-                          className={`p-sp-12 text-center text-text-secondary ${
-                            isNo1Column ? 'font-semibold text-accent-primary bg-accent-light/10' : ''
-                          }`}
-                        >
-                          {val}
-                        </td>
-                      );
-                    })}
+                    {row.values.map((val, cIdx) => (
+                      <td
+                        key={cIdx}
+                        className={`p-sp-12 text-center text-text-secondary ${
+                          cIdx === 0 ? 'font-semibold text-accent bg-accent-surface/30' : ''
+                        }`}
+                      >
+                        {val}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -203,7 +193,6 @@ export function SoftwareGridSection() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }

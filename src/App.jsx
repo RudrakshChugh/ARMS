@@ -13,12 +13,9 @@ import { Modal } from './components/ui/Modal';
 import { Search, Eye, Sparkles, Layers, Sliders, Laptop, ChevronRight } from 'lucide-react';
 
 import Home from './pages/Home';
+import Architecture from './pages/Architecture';
 import Journey from './pages/Journey';
 import JourneyDetails from './pages/JourneyDetails';
-// TEMPORARILY DISABLED: Planning page is hidden but kept in the codebase.
-// To restore: uncomment this import, its <Route> below, the nav link in Navbar.jsx,
-// and the footer link in Footer.jsx.
-// import Planning from './pages/Planning';
 import Versions from './pages/Versions';
 import Team from './pages/Team';
 import ReleaseControl from './pages/ReleaseControl';
@@ -257,6 +254,17 @@ const GlobalSearch = ({ isOpen, onClose }) => {
       }
     });
 
+    // Search NOVA documentation topics
+    const docTopics = [
+      { type: 'Architecture', name: '4-Tier Architecture & Pipeline Diagrams', path: '/architecture', desc: 'FastAPI, React 19, ONNX Runtime, pgvector, Docker & Cloudflare' },
+      { type: 'API & Database', name: 'REST API Endpoints & pgvector Schema', path: '/architecture', desc: '12 FastAPI routers, 26 Postgres tables, local setup commands' }
+    ];
+    docTopics.forEach(topic => {
+      if (topic.name.toLowerCase().includes(q) || topic.desc.toLowerCase().includes(q)) {
+        results.push(topic);
+      }
+    });
+
     return results.slice(0, 8);
   };
 
@@ -355,10 +363,10 @@ const AppContent = () => {
         <Routes>
           {/* Main Public Routes */}
           <Route path="/" element={<Home />} />
+          <Route path="/architecture" element={<Architecture />} />
           <Route path="/journey" element={<Journey />} />
           <Route path="/journey/:id" element={<JourneyDetails />} />
-          
-          {/* TEMPORARILY DISABLED: <Route path="/planning" element={<Planning />} /> */}
+          <Route path="/planning" element={<Navigate to="/architecture" replace />} />
           <Route path="/versions" element={<Versions />} />
           <Route path="/team" element={<Team />} />
 
